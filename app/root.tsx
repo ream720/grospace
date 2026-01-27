@@ -6,8 +6,11 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
+import { Navbar } from "./components/navbar";
+import { initializeAuth } from "./stores/authStore";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -42,7 +45,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  useEffect(() => {
+    // Initialize Firebase auth state listener
+    initializeAuth();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

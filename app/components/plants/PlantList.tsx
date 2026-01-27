@@ -1,0 +1,214 @@
+import { useEffect, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import { PlantCard } from './PlantCard';
+import { PlantForm } from './PlantForm';
+import { MoveDialog } from './MoveDialog';
+import { HarvestDialog } from './HarvestDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import type { Plant, GrowSpace, PlantStatus } from '../../lib/types';
+import { usePlantStore } from '../../stores/plantStore';
+
+interface PlantListProps {
+  spaceId?: string;
+  spaces: GrowSpace[];
+  showAddButton?: boolean;
+}
+
+export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PlantStatus | 'all'>('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
+  const [movingPlant, setMovingPlant] = useState<Plant | null>(null);
+  const [harvestingPlant, setHarvestingPlant] = useState<Plant | null>(null);
+
+  const { plants, loading, error, loadPlants, getPlantsBySpace } = usePlantStore();
+
+  useEffect(() => {
+    loadPlants(spaceId);
+  }, [spaceId, loadPlants]);
+
+  const displayPlants = spaceId ? getPlantsBySpace(spaceId) : plants;
+
+  const filteredPlants = displayPlants.filter((plant) => {
+    const matchesSearch = plant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plant.variety.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || plant.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleAddSuccess = () => {
+    setShowAddDialog(false);
+    loadPlants(spaceId);
+  };
+
+  const handleEditSuccess = () => {
+    setEditingPlant(null);
+    loadPlants(spaceId);
+  };
+
+  const handleMoveSuccess = () => {
+    setMovingPlant(null);
+    loadPlants(spaceId);
+  };
+
+  const handleHarvestSuccess = () => {
+    setHarvestingPlant(null);
+    loadPlants(spaceId);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={() => loadPlants(spaceId)} className="mt-2">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header with filters and add button */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-2 flex-1">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search plants..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PlantStatus | 'all')}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="seedling">Seedling</SelectItem>
+              <SelectItem value="vegetative">Vegetative</SelectItem>
+              <SelectItem value="flowering">Flowering</SelectItem>
+              <SelectItem value="harvested">Harvested</SelectItem>
+              <SelectItem value="removed">Removed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {showAddButton && (
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Plant
+          </Button>
+        )}
+      </div>
+
+      {/* Plants grid */}
+      {filteredPlants.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            {searchTerm || statusFilter !== 'all' 
+              ? 'No plants match your filters.' 
+              : spaceId 
+                ? 'No plants in this space yet.' 
+                : 'No plants added yet.'
+            }
+          </p>
+          {showAddButton && !searchTerm && statusFilter === 'all' && (
+            <Button onClick={() => setShowAddDialog(true)} className="mt-2">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Plant
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPlants.map((plant) => (
+            <PlantCard
+              key={plant.id}
+              plant={plant}
+              onEdit={setEditingPlant}
+              onMove={setMovingPlant}
+              onHarvest={setHarvestingPlant}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Add Plant Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Plant</DialogTitle>
+          </DialogHeader>
+          <PlantForm
+            spaces={spaces}
+            onSuccess={handleAddSuccess}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Plant Dialog */}
+      <Dialog open={!!editingPlant} onOpenChange={() => setEditingPlant(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Plant</DialogTitle>
+          </DialogHeader>
+          {editingPlant && (
+            <PlantForm
+              plant={editingPlant}
+              spaces={spaces}
+              onSuccess={handleEditSuccess}
+              onCancel={() => setEditingPlant(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Plant Dialog */}
+      {movingPlant && (
+        <MoveDialog
+          plant={movingPlant}
+          spaces={spaces}
+          onSuccess={handleMoveSuccess}
+          onCancel={() => setMovingPlant(null)}
+        />
+      )}
+
+      {/* Harvest Plant Dialog */}
+      {harvestingPlant && (
+        <HarvestDialog
+          plant={harvestingPlant}
+          onSuccess={handleHarvestSuccess}
+          onCancel={() => setHarvestingPlant(null)}
+        />
+      )}
+    </div>
+  );
+}
