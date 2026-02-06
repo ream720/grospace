@@ -3,13 +3,7 @@ import { Plus } from 'lucide-react';
 
 import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
-// Simple toast implementation for now
-const useToast = () => ({
-  toast: ({ title, description, variant }: { title: string; description: string; variant?: string }) => {
-    console.log(`Toast: ${title} - ${description}`);
-    // In a real implementation, this would show a toast notification
-  }
-});
+import { useToast } from '../ui/use-toast';
 
 import { TaskList } from './TaskList';
 import { TaskForm } from './TaskForm';

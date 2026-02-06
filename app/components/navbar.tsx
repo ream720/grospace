@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { useState } from "react";
-import { Menu, X, Home, Building2, Sprout, StickyNote, CheckSquare } from "lucide-react";
+import { Menu, X, Home, Building2, Sprout, StickyNote, CheckSquare, Settings } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
 import { cn } from "~/lib/utils";
@@ -23,6 +23,7 @@ export function Navbar() {
     { name: "Plants", href: "/plants", icon: Sprout },
     { name: "Notes", href: "/notes", icon: StickyNote },
     { name: "Tasks", href: "/tasks", icon: CheckSquare },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   const navigation = user ? authenticatedNavigation : publicNavigation;
@@ -44,17 +45,17 @@ export function Navbar() {
               Grospace
             </Link>
           </div>
-          
+
           <div className="hidden md:block">
             <div className="flex items-center space-x-4">
               {navigation.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.href || 
+                const isActive = location.pathname === item.href ||
                   (item.href === '/spaces' && location.pathname.startsWith('/spaces')) ||
                   (item.href === '/tasks' && location.pathname.startsWith('/tasks')) ||
                   (item.href === '/plants' && location.pathname.startsWith('/plants')) ||
                   (item.href === '/notes' && location.pathname.startsWith('/notes'));
-                
+
                 return (
                   <Link
                     key={item.name}
@@ -72,9 +73,9 @@ export function Navbar() {
                 );
               })}
               {user && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleLogout}
                   className="ml-2"
                 >
@@ -87,9 +88,9 @@ export function Navbar() {
           {/* Mobile menu */}
           <div className="md:hidden flex items-center space-x-2">
             {user && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleLogout}
               >
                 Log Out
@@ -109,12 +110,12 @@ export function Navbar() {
                   <nav className="flex flex-col space-y-2">
                     {navigation.map((item) => {
                       const Icon = item.icon;
-                      const isActive = location.pathname === item.href || 
+                      const isActive = location.pathname === item.href ||
                         (item.href === '/spaces' && location.pathname.startsWith('/spaces')) ||
                         (item.href === '/tasks' && location.pathname.startsWith('/tasks')) ||
                         (item.href === '/plants' && location.pathname.startsWith('/plants')) ||
                         (item.href === '/notes' && location.pathname.startsWith('/notes'));
-                      
+
                       return (
                         <Link
                           key={item.name}

@@ -24,4 +24,7 @@ export default [
 
   // Tasks
   route("/tasks", "routes/tasks.tsx"),
+
+  // Settings
+  route("/settings", "routes/settings.tsx"),
 ] satisfies RouteConfig;

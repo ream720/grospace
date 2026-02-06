@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../lib/firebase/config';
-import { 
-  createUser, 
-  signIn as firebaseSignIn, 
-  signOutUser, 
+import {
+  createUser,
+  signIn as firebaseSignIn,
+  signOutUser,
   resetPassword as firebaseResetPassword,
-  formatAuthUser 
+  updateUserProfile,
+  formatAuthUser
 } from '../lib/firebase/auth';
 import type { AuthUser, AuthState } from '../lib/types/auth';
 
@@ -15,7 +16,7 @@ interface AuthStore extends AuthState {
   signingIn: boolean;
   signingUp: boolean;
   resettingPassword: boolean;
-  
+
   // Actions
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -89,17 +90,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   updateProfile: async (updates: { displayName?: string; email?: string }) => {
     try {
       set({ loading: true, error: null });
-      // TODO: Implement profile update logic when needed
-      // For now, just update local state
+
+      if (updates.displayName) {
+        await updateUserProfile(updates.displayName);
+      }
+
+      // Update local state
       const currentUser = get().user;
       if (currentUser) {
-        set({ 
-          user: { 
-            ...currentUser, 
+        set({
+          user: {
+            ...currentUser,
             displayName: updates.displayName || currentUser.displayName,
-            email: updates.email || currentUser.email 
           },
-          loading: false 
+          loading: false
         });
       }
     } catch (error) {
@@ -123,19 +127,19 @@ let authInitialized = false;
 
 export const initializeAuth = () => {
   if (authInitialized) return;
-  
+
   authInitialized = true;
-  
+
   onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
     const store = useAuthStore.getState();
-    
+
     if (firebaseUser) {
       const user = formatAuthUser(firebaseUser);
       store.setUser(user);
     } else {
       store.setUser(null);
     }
-    
+
     store.setLoading(false);
   });
 };

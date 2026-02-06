@@ -21,7 +21,7 @@ export const createUser = async (
 ): Promise<AuthUser> => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(userCredential.user, { displayName });
-  
+
   return {
     uid: userCredential.user.uid,
     email: userCredential.user.email,
@@ -40,6 +40,11 @@ export const signIn = async (email: string, password: string): Promise<AuthUser>
 
 export const signOutUser = async (): Promise<void> => {
   await signOut(auth);
+};
+
+export const updateUserProfile = async (displayName: string): Promise<void> => {
+  if (!auth.currentUser) throw new Error('No user logged in');
+  await updateProfile(auth.currentUser, { displayName });
 };
 
 export const resetPassword = async (email: string): Promise<void> => {

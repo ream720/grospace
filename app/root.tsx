@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import { Navbar } from "./components/navbar";
 import { initializeAuth } from "./stores/authStore";
+import { Toaster } from "./components/ui/toaster";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -56,6 +57,7 @@ export default function App() {
       <main>
         <Outlet />
       </main>
+      <Toaster />
     </div>
   );
 }

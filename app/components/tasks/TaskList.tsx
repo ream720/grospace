@@ -6,19 +6,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-// Simple tabs implementation
-const Tabs = ({ value, onValueChange, children }: { value: string; onValueChange: (value: string) => void; children: React.ReactNode }) => (
-  <div data-value={value} data-onvaluechange={onValueChange}>{children}</div>
-);
-const TabsList = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={`flex space-x-1 ${className}`}>{children}</div>
-);
-const TabsTrigger = ({ value, children, className }: { value: string; children: React.ReactNode; className?: string }) => (
-  <button className={`px-3 py-2 rounded ${className}`} onClick={() => {}}>{children}</button>
-);
-const TabsContent = ({ value, children, className }: { value: string; children: React.ReactNode; className?: string }) => (
-  <div className={className}>{children}</div>
-);
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Separator } from '../ui/separator';
 
 import { TaskCard } from './TaskCard';
@@ -76,13 +64,13 @@ export function TaskList({
     // Tab filter
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     switch (filterTab) {
       case 'pending':
         filtered = filtered.filter(task => task.status === 'pending');
         break;
       case 'overdue':
-        filtered = filtered.filter(task => 
+        filtered = filtered.filter(task =>
           task.status === 'pending' && task.dueDate < today
         );
         break;
@@ -181,13 +169,13 @@ export function TaskList({
     const sortedKeys = Object.keys(groups).sort((a, b) => {
       if (groupBy === 'priority') {
         const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
-        return (priorityOrder[a as keyof typeof priorityOrder] || 3) - 
-               (priorityOrder[b as keyof typeof priorityOrder] || 3);
+        return (priorityOrder[a as keyof typeof priorityOrder] || 3) -
+          (priorityOrder[b as keyof typeof priorityOrder] || 3);
       }
       if (groupBy === 'dueDate') {
         const dateOrder = { 'Overdue': 0, 'Today': 1, 'Tomorrow': 2, 'This Week': 3, 'Later': 4 };
-        return (dateOrder[a as keyof typeof dateOrder] || 5) - 
-               (dateOrder[b as keyof typeof dateOrder] || 5);
+        return (dateOrder[a as keyof typeof dateOrder] || 5) -
+          (dateOrder[b as keyof typeof dateOrder] || 5);
       }
       return a.localeCompare(b);
     });
@@ -203,7 +191,7 @@ export function TaskList({
   const taskCounts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     return {
       all: tasks.length,
       pending: tasks.filter(t => t.status === 'pending').length,
@@ -387,14 +375,14 @@ export function TaskList({
                     <Separator className="mb-4" />
                   </>
                 )}
-                
+
                 {groupTasks.length === 0 ? (
                   <Card>
                     <CardContent className="p-8 text-center">
                       <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                       <h3 className="text-lg font-medium mb-2">No tasks found</h3>
                       <p className="text-muted-foreground mb-4">
-                        {filterTab === 'all' 
+                        {filterTab === 'all'
                           ? "You don't have any tasks yet."
                           : `No ${filterTab} tasks match your current filters.`
                         }
