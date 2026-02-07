@@ -21,8 +21,9 @@
 - [x] **Create New Space from Plant Form**: Implemented with unique timestamp-based naming.
 - [x] **User Profile Page**: Implemented at `/profile` with user info, garden statistics, and activity feed.
 - [x] **Activity Feed**: Unified activity feed on Dashboard and Profile, showing notes, tasks, plants, and spaces chronologically.
-- [ ] **Garden Statistics**: Expand dashboard stats with success rate, harvest yields, etc. Build mock data simulating a year of garden activity.
-- [ ] **Activity Feed Enhancement**: Consider adding filters by activity type (notes only, tasks only, etc.).
+- [x] **Garden Statistics**: Expanded dashboard stats with success rate, avg harvest time, 6 total stat cards. Includes dev-only mock data toggle for testing.
+- [x] **Activity Feed Enhancement**: Added filter tabs (All, Notes, Tasks, Plants, Spaces) on Dashboard Activity Feed.
+
 
 ## 🌐 Future Social Features (Post-Beta)
 Following the successful beta launch, these features will build upon the Activity Feed foundation:

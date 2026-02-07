@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Building2, Sprout, Plus, CheckSquare, StickyNote } from 'lucide-react';
-import { isAfter } from 'date-fns';
+import { Building2, Sprout, Plus, CheckSquare, StickyNote, BarChart3, Calendar, FlaskConical } from 'lucide-react';
+import { isAfter, differenceInDays } from 'date-fns';
 import type { Route } from "./+types/dashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -18,6 +18,7 @@ import { StatCard } from '../components/dashboard/StatCard';
 import { UpcomingTasks } from '../components/dashboard/UpcomingTasks';
 import { ActivityFeed } from '../components/activity/ActivityFeed';
 import { activityService } from '../lib/services/activityService';
+import { generateMockData, type MockDataResult } from '../lib/services/mockDataService';
 
 export function meta({ }: Route.MetaArgs) {
     return [
@@ -33,6 +34,10 @@ function DashboardContent() {
     const { tasks, loadTasks, getUpcomingTasks, getOverdueTasks, loading: tasksLoading } = useTaskStore();
     const { notes, loadNotes, loading: notesLoading } = useNoteStore();
 
+    // DEV ONLY: Mock data state (remove before production)
+    const [mockData, setMockData] = useState<MockDataResult | null>(null);
+    const [useMockData, setUseMockData] = useState(false);
+
     useEffect(() => {
         if (user) {
             loadSpaces();
@@ -42,26 +47,73 @@ function DashboardContent() {
         }
     }, [user, loadSpaces, loadPlants, loadTasks, loadNotes]);
 
-    const totalPlants = plants.length;
-    const activePlants = plants.filter(p => p.status !== 'harvested' && p.status !== 'removed').length;
-    const harvestedPlants = plants.filter(p => p.status === 'harvested').length;
+    // Determine which data to use (real or mock)
+    const displaySpaces = useMockData && mockData ? mockData.spaces : spaces;
+    const displayPlants = useMockData && mockData ? mockData.plants : plants;
+    const displayTasks = useMockData && mockData ? mockData.tasks : tasks;
+    const displayNotes = useMockData && mockData ? mockData.notes : notes;
 
-    // Recent activity data
+    const totalPlants = displayPlants.length;
+    const activePlants = displayPlants.filter(p => p.status !== 'harvested' && p.status !== 'removed').length;
+    const harvestedPlants = displayPlants.filter(p => p.status === 'harvested').length;
+    const removedPlants = displayPlants.filter(p => p.status === 'removed').length;
+
+    // Calculate enhanced stats
+    const enhancedStats = useMemo(() => {
+        const completedPlants = harvestedPlants + removedPlants;
+        const successRate = completedPlants > 0
+            ? Math.round((harvestedPlants / completedPlants) * 100)
+            : 0;
+
+        // Calculate average days to harvest
+        const harvestedWithDates = displayPlants.filter(
+            p => p.status === 'harvested' && p.actualHarvestDate
+        );
+        const avgDaysToHarvest = harvestedWithDates.length > 0
+            ? Math.round(
+                harvestedWithDates.reduce((sum, plant) => {
+                    const days = differenceInDays(
+                        plant.actualHarvestDate!,
+                        plant.plantedDate
+                    );
+                    return sum + days;
+                }, 0) / harvestedWithDates.length
+            )
+            : 0;
+
+        return { successRate, avgDaysToHarvest, completedPlants };
+    }, [displayPlants, harvestedPlants, removedPlants]);
+
+    // Recent activity data (use real tasks for upcoming/overdue since mock tasks don't sync with store)
     const upcomingTasks = getUpcomingTasks(7); // Next 7 days
     const overdueTasks = getOverdueTasks();
 
     // Generate activity feed
     const activities = useMemo(() => {
         return activityService.generateActivities(
-            notes,
-            tasks,
-            plants,
-            spaces,
+            displayNotes,
+            displayTasks,
+            displayPlants,
+            displaySpaces,
             { limit: 10 }
         );
-    }, [notes, tasks, plants, spaces]);
+    }, [displayNotes, displayTasks, displayPlants, displaySpaces]);
 
     const isLoading = spacesLoading || plantsLoading || tasksLoading || notesLoading;
+
+    // DEV ONLY: Handle mock data toggle (remove before production)
+    const handleToggleMockData = () => {
+        if (!useMockData && user) {
+            // Generate mock data if not already generated
+            if (!mockData) {
+                setMockData(generateMockData(user.uid));
+            }
+            setUseMockData(true);
+        } else {
+            setUseMockData(false);
+        }
+    };
+
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -72,28 +124,46 @@ function DashboardContent() {
                 </p>
             </div>
 
+            {/* DEV ONLY: Mock Data Toggle (remove before production) */}
+            <div className="mb-4 flex items-center gap-2">
+                <Button
+                    variant={useMockData ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={handleToggleMockData}
+                    className="gap-2"
+                >
+                    <FlaskConical className="h-4 w-4" />
+                    {useMockData ? "Using Demo Data" : "Load Demo Data"}
+                </Button>
+                {useMockData && (
+                    <span className="text-xs text-muted-foreground">
+                        (Development only - showing mock garden data)
+                    </span>
+                )}
+            </div>
+
             {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
                 <StatCard
                     title="Total Spaces"
-                    value={spaces.length}
+                    value={displaySpaces.length}
                     description="Growing environments"
                     icon={Building2}
-                    isLoading={isLoading}
+                    isLoading={isLoading && !useMockData}
                 />
                 <StatCard
                     title="Total Plants"
                     value={totalPlants}
                     description="All plants tracked"
                     icon={Sprout}
-                    isLoading={isLoading}
+                    isLoading={isLoading && !useMockData}
                 />
                 <StatCard
                     title="Active Plants"
                     value={activePlants}
                     description="Currently growing"
                     icon={Sprout}
-                    isLoading={isLoading}
+                    isLoading={isLoading && !useMockData}
                     iconClassName="text-green-600"
                 />
                 <StatCard
@@ -101,10 +171,27 @@ function DashboardContent() {
                     value={harvestedPlants}
                     description="Successfully harvested"
                     icon={Sprout}
-                    isLoading={isLoading}
+                    isLoading={isLoading && !useMockData}
                     iconClassName="text-orange-600"
                 />
+                <StatCard
+                    title="Success Rate"
+                    value={enhancedStats.completedPlants > 0 ? `${enhancedStats.successRate}%` : 'N/A'}
+                    description={`${enhancedStats.completedPlants} completed grows`}
+                    icon={BarChart3}
+                    isLoading={isLoading && !useMockData}
+                    iconClassName="text-emerald-600"
+                />
+                <StatCard
+                    title="Avg. Harvest Time"
+                    value={enhancedStats.avgDaysToHarvest > 0 ? `${enhancedStats.avgDaysToHarvest}d` : 'N/A'}
+                    description="Days from plant to harvest"
+                    icon={Calendar}
+                    isLoading={isLoading && !useMockData}
+                    iconClassName="text-blue-600"
+                />
             </div>
+
 
             {/* Main Content Grid */}
             <div className="grid gap-6 lg:grid-cols-3">
@@ -196,10 +283,11 @@ function DashboardContent() {
                 <div className="space-y-6">
                     <ActivityFeed
                         activities={activities}
-                        isLoading={isLoading}
+                        isLoading={isLoading && !useMockData}
                         title="Recent Activity"
                         description="Your latest garden activities"
                         emptyMessage="No recent activity. Start adding plants, notes, or tasks!"
+                        showFilters={true}
                     />
                 </div>
             </div>
