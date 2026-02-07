@@ -46,7 +46,7 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
 
   const filteredPlants = displayPlants.filter((plant) => {
     const matchesSearch = plant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plant.variety.toLowerCase().includes(searchTerm.toLowerCase());
+      plant.variety.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || plant.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -132,10 +132,10 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
       {filteredPlants.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
-            {searchTerm || statusFilter !== 'all' 
-              ? 'No plants match your filters.' 
-              : spaceId 
-                ? 'No plants in this space yet.' 
+            {searchTerm || statusFilter !== 'all'
+              ? 'No plants match your filters.'
+              : spaceId
+                ? 'No plants in this space yet.'
                 : 'No plants added yet.'
             }
           </p>
@@ -168,6 +168,7 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
           </DialogHeader>
           <PlantForm
             spaces={spaces}
+            defaultSpaceId={spaceId}
             onSuccess={handleAddSuccess}
             onCancel={() => setShowAddDialog(false)}
           />

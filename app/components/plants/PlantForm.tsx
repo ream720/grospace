@@ -40,9 +40,7 @@ const plantFormSchema = z.object({
   variety: z.string().min(1, 'Variety is required'),
   spaceId: z.string().min(1, 'Space selection is required'),
   seedSource: z.string().optional(),
-  plantedDate: z.date({
-    required_error: 'Planting date is required',
-  }),
+  plantedDate: z.date(),
   expectedHarvestDate: z.date().optional(),
   status: z.enum(['seedling', 'vegetative', 'flowering', 'harvested', 'removed'] as const),
   notes: z.string().optional(),
@@ -53,11 +51,12 @@ type PlantFormData = z.infer<typeof plantFormSchema>;
 interface PlantFormProps {
   plant?: Plant;
   spaces: GrowSpace[];
+  defaultSpaceId?: string;
   onSuccess?: (plant: Plant) => void;
   onCancel?: () => void;
 }
 
-export function PlantForm({ plant, spaces, onSuccess, onCancel }: PlantFormProps) {
+export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }: PlantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createPlant, updatePlant } = usePlantStore();
   const { user } = useAuthStore();
@@ -67,10 +66,10 @@ export function PlantForm({ plant, spaces, onSuccess, onCancel }: PlantFormProps
     defaultValues: {
       name: plant?.name || '',
       variety: plant?.variety || '',
-      spaceId: plant?.spaceId || '',
+      spaceId: plant?.spaceId || defaultSpaceId || '',
       seedSource: plant?.seedSource || '',
-      plantedDate: plant?.plantedDate ? toDate(plant.plantedDate) : new Date(),
-      expectedHarvestDate: plant?.expectedHarvestDate ? toDate(plant.expectedHarvestDate) : undefined,
+      plantedDate: (plant?.plantedDate && toDate(plant.plantedDate)) || new Date(),
+      expectedHarvestDate: (plant?.expectedHarvestDate && toDate(plant.expectedHarvestDate)) || undefined,
       status: plant?.status || 'seedling',
       notes: plant?.notes || '',
     },
@@ -84,8 +83,8 @@ export function PlantForm({ plant, spaces, onSuccess, onCancel }: PlantFormProps
         variety: plant.variety || '',
         spaceId: plant.spaceId || '',
         seedSource: plant.seedSource || '',
-        plantedDate: plant.plantedDate ? toDate(plant.plantedDate) : new Date(),
-        expectedHarvestDate: plant.expectedHarvestDate ? toDate(plant.expectedHarvestDate) : undefined,
+        plantedDate: (plant.plantedDate && toDate(plant.plantedDate)) || new Date(),
+        expectedHarvestDate: (plant.expectedHarvestDate && toDate(plant.expectedHarvestDate)) || undefined,
         status: plant.status || 'seedling',
         notes: plant.notes || '',
       });
