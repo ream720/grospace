@@ -23,7 +23,7 @@ describe('LoginForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock the auth store implementation
     (useAuthStore as any).mockReturnValue({
       signIn: mockSignIn,
@@ -43,7 +43,7 @@ describe('LoginForm', () => {
 
   it('renders login form with email and password fields', () => {
     renderLoginForm();
-    
+
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
@@ -51,10 +51,10 @@ describe('LoginForm', () => {
 
   it('shows validation errors for empty fields', async () => {
     renderLoginForm();
-    
+
     const submitButton = screen.getByRole('button', { name: /sign in/i });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText(/email is required/i)).toBeInTheDocument();
       expect(screen.getByText(/password is required/i)).toBeInTheDocument();
@@ -63,15 +63,15 @@ describe('LoginForm', () => {
 
   it('prevents submission with invalid email', async () => {
     renderLoginForm();
-    
+
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
     const submitButton = screen.getByRole('button', { name: /sign in/i });
-    
+
     fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
     fireEvent.click(submitButton);
-    
+
     // Should not call signIn with invalid email
     await waitFor(() => {
       expect(mockSignIn).not.toHaveBeenCalled();
@@ -80,18 +80,18 @@ describe('LoginForm', () => {
 
   it('calls signIn with correct credentials on form submission', async () => {
     renderLoginForm();
-    
+
     const emailInput = screen.getByLabelText(/email/i);
     const passwordInput = screen.getByLabelText(/password/i);
     const submitButton = screen.getByRole('button', { name: /sign in/i });
-    
+
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(mockClearError).toHaveBeenCalled();
-      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123');
+      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123', false);
     });
   });
 
@@ -104,7 +104,7 @@ describe('LoginForm', () => {
     });
 
     renderLoginForm();
-    
+
     expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
   });
 
@@ -117,20 +117,20 @@ describe('LoginForm', () => {
     });
 
     renderLoginForm();
-    
+
     expect(screen.getByText(/signing in.../i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /signing in.../i })).toBeDisabled();
   });
 
   it('contains links to register and reset password', () => {
     renderLoginForm();
-    
+
     expect(screen.getByText(/don't have an account/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /sign up/i })).toHaveAttribute('href', '/register');
-    
+
     const forgotPasswordButton = screen.getByText(/forgot your password/i);
     fireEvent.click(forgotPasswordButton);
-    
+
     expect(screen.getByRole('link', { name: /reset your password here/i })).toHaveAttribute('href', '/reset-password');
   });
 });

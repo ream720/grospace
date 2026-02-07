@@ -9,6 +9,7 @@ interface StatCardProps {
     icon: LucideIcon;
     isLoading?: boolean;
     iconClassName?: string;
+    trend?: string;
 }
 
 export function StatCard({
@@ -17,7 +18,8 @@ export function StatCard({
     description,
     icon: Icon,
     isLoading,
-    iconClassName = "text-muted-foreground"
+    iconClassName = "text-muted-foreground",
+    trend
 }: StatCardProps) {
     return (
         <Card>
@@ -29,11 +31,18 @@ export function StatCard({
                 {isLoading ? (
                     <Skeleton className="h-8 w-16 mb-1" />
                 ) : (
-                    <div className="text-2xl font-bold">{value}</div>
+                    <div className="flex flex-col">
+                        <div className="text-2xl font-bold">{value}</div>
+                        <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            {trend && (
+                                <span className="text-green-600 font-medium mr-2">
+                                    {trend}
+                                </span>
+                            )}
+                            {description}
+                        </div>
+                    </div>
                 )}
-                <p className="text-xs text-muted-foreground">
-                    {description}
-                </p>
             </CardContent>
         </Card>
     );

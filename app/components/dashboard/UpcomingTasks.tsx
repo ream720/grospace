@@ -28,19 +28,23 @@ export function UpcomingTasks({ upcomingTasks, overdueTasks, isLoading }: Upcomi
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
+                        <div className="space-y-3">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
                         </div>
                     ) : upcomingTasks.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {upcomingTasks.slice(0, 3).map((task) => (
-                                <div key={task.id} className="flex items-center justify-between p-2 border rounded">
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">{task.title}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Due: {format(new Date(task.dueDate), 'MMM d')}
+                                <div
+                                    key={task.id}
+                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                                >
+                                    <div className="flex-1 min-w-0 mr-4">
+                                        <p className="text-sm font-medium truncate">{task.title}</p>
+                                        <p className="text-xs text-muted-foreground flex items-center mt-1">
+                                            <Calendar className="mr-1 h-3 w-3" />
+                                            {format(new Date(task.dueDate), 'MMM d, yyyy')}
                                         </p>
                                     </div>
                                     <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'}>
@@ -50,14 +54,20 @@ export function UpcomingTasks({ upcomingTasks, overdueTasks, isLoading }: Upcomi
                             ))}
                             {upcomingTasks.length > 3 && (
                                 <Link to="/tasks">
-                                    <Button variant="ghost" size="sm" className="w-full">
+                                    <Button variant="ghost" size="sm" className="w-full mt-2">
                                         View all {upcomingTasks.length} upcoming tasks
                                     </Button>
                                 </Link>
                             )}
                         </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground">No upcoming tasks</p>
+                        <div className="text-center py-8 text-muted-foreground">
+                            <Calendar className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                            <p className="text-sm">No upcoming tasks</p>
+                            <Button variant="link" size="sm" asChild>
+                                <Link to="/tasks">Create a task</Link>
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
             </Card>

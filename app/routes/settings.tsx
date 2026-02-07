@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { User, Settings as SettingsIcon, Bell, Shield, LogOut, Save } from "lucide-react";
+import { User, Settings as SettingsIcon, Bell, Shield, LogOut, Save, Sun, Moon, Monitor } from "lucide-react";
 import type { Route } from "./+types/settings";
 import { useAuthStore } from "~/stores/authStore";
+import { useThemeStore } from "~/stores/themeStore";
 import { ProtectedRoute } from "~/components/routing/ProtectedRoute";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -21,6 +22,7 @@ export function meta({ }: Route.MetaArgs) {
 
 function SettingsContent() {
     const { user, updateProfile, error, clearError } = useAuthStore();
+    const { theme, setTheme } = useThemeStore();
     const { toast } = useToast();
 
     const [displayName, setDisplayName] = useState("");
@@ -121,6 +123,41 @@ function SettingsContent() {
                                 </Button>
                             </CardFooter>
                         </form>
+                    </Card>
+
+                    {/* Appearance Section */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Appearance</CardTitle>
+                            <CardDescription>
+                                Customize the look and feel of the application.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Button
+                                    variant={theme === 'light' ? 'default' : 'outline'}
+                                    className="w-full justify-start"
+                                    onClick={() => setTheme('light')}
+                                >
+                                    <Sun className="mr-2 h-4 w-4" /> Light
+                                </Button>
+                                <Button
+                                    variant={theme === 'dark' ? 'default' : 'outline'}
+                                    className="w-full justify-start"
+                                    onClick={() => setTheme('dark')}
+                                >
+                                    <Moon className="mr-2 h-4 w-4" /> Dark
+                                </Button>
+                                <Button
+                                    variant={theme === 'system' ? 'default' : 'outline'}
+                                    className="w-full justify-start"
+                                    onClick={() => setTheme('system')}
+                                >
+                                    <Monitor className="mr-2 h-4 w-4" /> System
+                                </Button>
+                            </div>
+                        </CardContent>
                     </Card>
 
                     {/* Account Status */}

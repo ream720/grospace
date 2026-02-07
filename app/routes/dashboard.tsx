@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Building2, Sprout, Plus, CheckSquare, StickyNote, BarChart3, Calendar, FlaskConical } from 'lucide-react';
+import { Building2, Sprout, Plus, CheckSquare, StickyNote, BarChart3, Calendar, FlaskConical, ArrowRight } from 'lucide-react';
 import { isAfter, differenceInDays } from 'date-fns';
 import type { Route } from "./+types/dashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -17,6 +17,8 @@ import { useNoteStore } from '../stores/noteStore';
 import { StatCard } from '../components/dashboard/StatCard';
 import { UpcomingTasks } from '../components/dashboard/UpcomingTasks';
 import { ActivityFeed } from '../components/activity/ActivityFeed';
+import { QuickActions } from '../components/dashboard/QuickActions';
+import { PlantStageDistribution } from '../components/dashboard/PlantStageDistribution';
 import { activityService } from '../lib/services/activityService';
 import { generateMockData, type MockDataResult } from '../lib/services/mockDataService';
 
@@ -114,50 +116,39 @@ function DashboardContent() {
         }
     };
 
+    // Greeting based on time of day
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
+    };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-                <p className="text-muted-foreground">
-                    Welcome back! Here's an overview of your garden.
-                </p>
-            </div>
+        <div className="container mx-auto px-2 md:px-4 py-4 md:py-8 space-y-6 md:space-y-8">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2 md:px-0">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">{getGreeting()}, {user?.displayName?.split(' ')[0] || 'Gardener'}! 🌿</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Here's what's happening in your garden today.
+                    </p>
+                </div>
 
-            {/* DEV ONLY: Mock Data Toggle (remove before production) */}
-            <div className="mb-4 flex items-center gap-2">
+                {/* DEV ONLY: Mock Data Toggle */}
                 <Button
                     variant={useMockData ? "destructive" : "outline"}
                     size="sm"
                     onClick={handleToggleMockData}
-                    className="gap-2"
+                    className="gap-2 self-start md:self-auto"
                 >
                     <FlaskConical className="h-4 w-4" />
-                    {useMockData ? "Using Demo Data" : "Load Demo Data"}
+                    {useMockData ? "Disable Demo Data" : "Load Demo Data"}
                 </Button>
-                {useMockData && (
-                    <span className="text-xs text-muted-foreground">
-                        (Development only - showing mock garden data)
-                    </span>
-                )}
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-                <StatCard
-                    title="Total Spaces"
-                    value={displaySpaces.length}
-                    description="Growing environments"
-                    icon={Building2}
-                    isLoading={isLoading && !useMockData}
-                />
-                <StatCard
-                    title="Total Plants"
-                    value={totalPlants}
-                    description="All plants tracked"
-                    icon={Sprout}
-                    isLoading={isLoading && !useMockData}
-                />
+            {/* Key Stats Row */}
+            <div className="grid grid-cols-2 gap-3 lg:gap-4 lg:grid-cols-4">
                 <StatCard
                     title="Active Plants"
                     value={activePlants}
@@ -165,130 +156,106 @@ function DashboardContent() {
                     icon={Sprout}
                     isLoading={isLoading && !useMockData}
                     iconClassName="text-green-600"
+                    trend={totalPlants > 0 ? "+2 this week" : undefined} // Placeholder trend
                 />
                 <StatCard
-                    title="Harvested"
+                    title="Spaces"
+                    value={displaySpaces.length}
+                    description="Active environments"
+                    icon={Building2}
+                    isLoading={isLoading && !useMockData}
+                    iconClassName="text-blue-600"
+                />
+                <StatCard
+                    title="Harvests"
                     value={harvestedPlants}
-                    description="Successfully harvested"
-                    icon={Sprout}
+                    description="Total harvested"
+                    icon={CheckSquare} // Using CheckSquare as a generic "done" icon
                     isLoading={isLoading && !useMockData}
                     iconClassName="text-orange-600"
                 />
                 <StatCard
                     title="Success Rate"
                     value={enhancedStats.completedPlants > 0 ? `${enhancedStats.successRate}%` : 'N/A'}
-                    description={`${enhancedStats.completedPlants} completed grows`}
+                    description="From completed grows"
                     icon={BarChart3}
                     isLoading={isLoading && !useMockData}
                     iconClassName="text-emerald-600"
                 />
-                <StatCard
-                    title="Avg. Harvest Time"
-                    value={enhancedStats.avgDaysToHarvest > 0 ? `${enhancedStats.avgDaysToHarvest}d` : 'N/A'}
-                    description="Days from plant to harvest"
-                    icon={Calendar}
-                    isLoading={isLoading && !useMockData}
-                    iconClassName="text-blue-600"
-                />
             </div>
 
-
             {/* Main Content Grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Left Column - Quick Actions & Getting Started */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                            <CardDescription>
-                                Get started with common tasks
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Link to="/spaces">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Building2 className="mr-2 h-4 w-4" />
-                                    Manage Spaces
-                                </Button>
-                            </Link>
-                            <Link to="/plants">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Sprout className="mr-2 h-4 w-4" />
-                                    View All Plants
-                                </Button>
-                            </Link>
-                            <Link to="/tasks">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <CheckSquare className="mr-2 h-4 w-4" />
-                                    Manage Tasks
-                                </Button>
-                            </Link>
-                            <Link to="/notes">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <StickyNote className="mr-2 h-4 w-4" />
-                                    View Notes
-                                </Button>
-                            </Link>
-                        </CardContent>
-                    </Card>
+            <div className="grid gap-6 md:gap-8 lg:grid-cols-12">
+                {/* Left Column (Main Content) - Spans 7 cols */}
+                <div className="lg:col-span-7 space-y-8">
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Getting Started</CardTitle>
-                            <CardDescription>
-                                {spaces.length === 0
-                                    ? "Create your first grow space to get started"
-                                    : totalPlants === 0
-                                        ? "Add your first plant to start tracking"
-                                        : "Your garden is set up! Keep tracking your plants."
-                                }
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {spaces.length === 0 ? (
-                                <Link to="/spaces">
-                                    <Button className="w-full">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Create First Space
-                                    </Button>
-                                </Link>
-                            ) : totalPlants === 0 ? (
-                                <Link to="/plants">
-                                    <Button className="w-full">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add First Plant
-                                    </Button>
-                                </Link>
-                            ) : (
-                                <div className="text-center py-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        Great job! Your garden is growing. 🌱
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                    {/* Getting Started (Conditional) */}
+                    {(spaces.length === 0 || totalPlants === 0) && !useMockData && (
+                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <CardHeader>
+                                <CardTitle>Let's Get Growing!</CardTitle>
+                                <CardDescription>
+                                    Your garden is looking a bit empty. Follow these steps to get started.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex gap-4">
+                                {spaces.length === 0 ? (
+                                    <Link to="/spaces">
+                                        <Button size="lg" className="w-full sm:w-auto">
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Create First Space
+                                        </Button>
+                                    </Link>
+                                ) : (
+                                    <Link to="/plants">
+                                        <Button size="lg" className="w-full sm:w-auto">
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add First Plant
+                                        </Button>
+                                    </Link>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
-                {/* Middle Column - Tasks & Alerts */}
-                <div className="space-y-6">
+                    {/* Upcoming Tasks */}
                     <UpcomingTasks
                         upcomingTasks={upcomingTasks}
                         overdueTasks={overdueTasks}
                         isLoading={isLoading}
                     />
+
+                    {/* Recent Notes or other "Main" content could go here */}
+                    {/* Plant Stages Distribution */}
+                    <PlantStageDistribution
+                        plants={displayPlants}
+                        isLoading={isLoading && !useMockData}
+                    />
+
+                    <div className="block lg:hidden">
+                        <ActivityFeed
+                            activities={activities}
+                            isLoading={isLoading && !useMockData}
+                            title="Recent Activity"
+                        />
+                    </div>
                 </div>
 
-                {/* Right Column - Recent Activity */}
-                <div className="space-y-6">
-                    <ActivityFeed
-                        activities={activities}
-                        isLoading={isLoading && !useMockData}
-                        title="Recent Activity"
-                        description="Your latest garden activities"
-                        emptyMessage="No recent activity. Start adding plants, notes, or tasks!"
-                        showFilters={true}
-                    />
+                {/* Right Column (Sidebar) - Spans 5 cols */}
+                <div className="lg:col-span-5 space-y-6 md:space-y-8 order-first lg:order-none">
+                    {/* Quick Actions */}
+                    <QuickActions />
+
+                    {/* Activity Feed (Desktop) */}
+                    <div className="hidden lg:block">
+                        <ActivityFeed
+                            activities={activities}
+                            isLoading={isLoading && !useMockData}
+                            title="Recent Activity"
+                            description="Latest updates"
+                            className="h-full"
+                        />
+                    </div>
                 </div>
             </div>
         </div>

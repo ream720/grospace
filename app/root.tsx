@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import { Navbar } from "./components/navbar";
 import { initializeAuth } from "./stores/authStore";
+import { useThemeStore } from "./stores/themeStore";
 import { Toaster } from "./components/ui/toaster";
 import "./app.css";
 
@@ -46,10 +47,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const theme = useThemeStore((state) => state.theme);
+
   useEffect(() => {
     // Initialize Firebase auth state listener
     initializeAuth();
   }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const applySystemTheme = () => {
+        const systemTheme = mediaQuery.matches ? "dark" : "light";
+        root.classList.add(systemTheme);
+        root.classList.remove(systemTheme === "dark" ? "light" : "dark");
+      };
+
+      applySystemTheme();
+
+      mediaQuery.addEventListener("change", applySystemTheme);
+      return () => mediaQuery.removeEventListener("change", applySystemTheme);
+    }
+
+    root.classList.add(theme);
+  }, [theme]);
 
   return (
     <div className="min-h-screen bg-background">
