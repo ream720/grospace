@@ -5,7 +5,7 @@
 - [x] **Toast Implementation**: `TasksPage.tsx` uses a simple `console.log` for toasts instead of a real toast library.
 - [x] **Tabs Implementation**: `TaskList.tsx` uses standard Radix UI Tabs for consistency.
 - [x] **Login Timeout**: Implemented session-based auth persistence. Users are now logged out when browser closes (unless "Remember Me" is checked).
-- [ ] **Navigation/Auth State**: Need to verify if the auth redirect works correctly across all routes.
+- [x] **Navigation/Auth State**: Verified that auth redirects work correctly across all routes. All 7 protected routes load properly when authenticated.
 - [ ] **Date Handling**: While tests show date handling is robust, I should check if `dashboard.tsx` or other components have any direct date manipulations that could fail.
 
 ## 🛠️ Major TODOs
