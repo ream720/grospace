@@ -17,6 +17,10 @@
 
 ## 🚀 Features to Finish
 - [x] **Settings Page**: Implemented at `/settings`.
+- [x] **Create New Space from Plant Form**: Implemented with unique timestamp-based naming.
 - [ ] **User Profile Page**: No dedicated profile page found.
 - [ ] **Garden Statistics**: Expand dashboard stats (e.g., success rate, harvest yields).
 - [ ] **Activity Feed**: A more robust activity feed than just "Recent Changes".
+
+## 🧪 Testing
+- [ ] **Integration Tests**: Add Playwright/Cypress tests for "Create New Space" functionality in PlantForm (Radix UI Select component testing is challenging in unit tests).

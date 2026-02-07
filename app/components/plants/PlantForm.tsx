@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -30,9 +30,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../ui/popover';
+import { useToast } from '../ui/use-toast';
 import type { Plant, PlantStatus, GrowSpace } from '../../lib/types';
 import { usePlantStore } from '../../stores/plantStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useSpaceStore } from '../../stores/spaceStore';
 import { toDate } from '../../lib/utils/dateUtils';
 
 const plantFormSchema = z.object({
@@ -59,7 +61,11 @@ interface PlantFormProps {
 export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }: PlantFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { createPlant, updatePlant } = usePlantStore();
+  const { createSpace, spaces: allSpaces } = useSpaceStore();
   const { user } = useAuthStore();
+  const { toast } = useToast();
+
+  const NEW_SPACE_VALUE = '__new_space__';
 
   const form = useForm<PlantFormData>({
     resolver: zodResolver(plantFormSchema),
@@ -96,20 +102,54 @@ export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }
 
     setIsSubmitting(true);
     try {
+      let finalSpaceId = data.spaceId;
+
+      // Handle "New Space" creation
+      if (data.spaceId === NEW_SPACE_VALUE) {
+        // Always create a new space with a unique timestamp-based name
+        const now = new Date();
+        const timestamp = format(now, 'MMM d, yyyy h:mm a');
+        const uniqueSpaceName = `New Space - ${timestamp}`;
+
+        try {
+          const newSpace = await createSpace({
+            userId: user.uid,
+            name: uniqueSpaceName,
+            type: 'indoor-tent', // Default type
+            description: 'Automatically created from plant form',
+          });
+          finalSpaceId = newSpace.id;
+
+          toast({
+            title: 'New Space Created',
+            description: `Created "${uniqueSpaceName}". You can edit it on the Spaces page.`,
+          });
+        } catch (error) {
+          console.error('Failed to create default space:', error);
+          throw new Error('Failed to create a new space. Please try selecting an existing one.');
+        }
+      }
+
       if (plant) {
         // Update existing plant
-        await updatePlant(plant.id, data);
+        await updatePlant(plant.id, { ...data, spaceId: finalSpaceId });
         onSuccess?.(plant);
       } else {
         // Create new plant
         const newPlant = await createPlant({
           ...data,
+          spaceId: finalSpaceId,
           userId: user.uid,
         });
         onSuccess?.(newPlant);
       }
     } catch (error) {
       console.error('Failed to save plant:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save plant',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -162,6 +202,15 @@ export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem
+                      value={NEW_SPACE_VALUE}
+                      className="text-primary font-medium focus:text-primary"
+                    >
+                      <div className="flex items-center gap-2">
+                        <PlusCircle className="h-4 w-4" />
+                        <span>+ Create New Space</span>
+                      </div>
+                    </SelectItem>
                     {spaces.map((space) => (
                       <SelectItem key={space.id} value={space.id}>
                         {space.name}
