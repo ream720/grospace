@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { Building2, Sprout, Plus, CheckSquare, StickyNote } from 'lucide-react';
 import { isAfter } from 'date-fns';
@@ -15,9 +15,9 @@ import { useNoteStore } from '../stores/noteStore';
 
 // Dashboard Components
 import { StatCard } from '../components/dashboard/StatCard';
-import { RecentNotes } from '../components/dashboard/RecentNotes';
 import { UpcomingTasks } from '../components/dashboard/UpcomingTasks';
-import { RecentPlantUpdates } from '../components/dashboard/RecentPlantUpdates';
+import { ActivityFeed } from '../components/activity/ActivityFeed';
+import { activityService } from '../lib/services/activityService';
 
 export function meta({ }: Route.MetaArgs) {
     return [
@@ -30,7 +30,7 @@ function DashboardContent() {
     const { user } = useAuthStore();
     const { spaces, loadSpaces, loading: spacesLoading } = useSpaceStore();
     const { plants, loadPlants, loading: plantsLoading } = usePlantStore();
-    const { loadTasks, getUpcomingTasks, getOverdueTasks, loading: tasksLoading } = useTaskStore();
+    const { tasks, loadTasks, getUpcomingTasks, getOverdueTasks, loading: tasksLoading } = useTaskStore();
     const { notes, loadNotes, loading: notesLoading } = useNoteStore();
 
     useEffect(() => {
@@ -49,10 +49,17 @@ function DashboardContent() {
     // Recent activity data
     const upcomingTasks = getUpcomingTasks(7); // Next 7 days
     const overdueTasks = getOverdueTasks();
-    const recentNotes = notes.slice(0, 3); // Show 3 most recent notes
-    const recentPlantChanges = plants
-        .filter(p => p.updatedAt && isAfter(new Date(p.updatedAt), new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
-        .slice(0, 3);
+
+    // Generate activity feed
+    const activities = useMemo(() => {
+        return activityService.generateActivities(
+            notes,
+            tasks,
+            plants,
+            spaces,
+            { limit: 10 }
+        );
+    }, [notes, tasks, plants, spaces]);
 
     const isLoading = spacesLoading || plantsLoading || tasksLoading || notesLoading;
 
@@ -187,13 +194,12 @@ function DashboardContent() {
 
                 {/* Right Column - Recent Activity */}
                 <div className="space-y-6">
-                    <RecentNotes
-                        notes={recentNotes}
+                    <ActivityFeed
+                        activities={activities}
                         isLoading={isLoading}
-                    />
-                    <RecentPlantUpdates
-                        plants={recentPlantChanges}
-                        isLoading={isLoading}
+                        title="Recent Activity"
+                        description="Your latest garden activities"
+                        emptyMessage="No recent activity. Start adding plants, notes, or tasks!"
                     />
                 </div>
             </div>

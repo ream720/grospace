@@ -19,11 +19,41 @@
 ## 🚀 Features to Finish
 - [x] **Settings Page**: Implemented at `/settings`.
 - [x] **Create New Space from Plant Form**: Implemented with unique timestamp-based naming.
-- [ ] **User Profile Page**: No dedicated profile page found. What should it do? Is it just publicly visibe Dashboard or Stats? Should it public (or should there be an option to make it private)? Will other users be able to see it? Will there be a user search/discovery feature?
-- [ ] **Garden Statistics**: Expand dashboard stats (e.g., success rate, harvest yields). Build a temporary mock simulating a user's garden who has been growing for a year so that we can see how the stats look.
-- [ ] **Activity Feed**: A more robust activity feed than just "Recent Changes".
+- [x] **User Profile Page**: Implemented at `/profile` with user info, garden statistics, and activity feed.
+- [x] **Activity Feed**: Unified activity feed on Dashboard and Profile, showing notes, tasks, plants, and spaces chronologically.
+- [ ] **Garden Statistics**: Expand dashboard stats with success rate, harvest yields, etc. Build mock data simulating a year of garden activity.
+- [ ] **Activity Feed Enhancement**: Consider adding filters by activity type (notes only, tasks only, etc.).
+
+## 🌐 Future Social Features (Post-Beta)
+Following the successful beta launch, these features will build upon the Activity Feed foundation:
+
+### Phase 2: Public Profiles
+- [ ] **Profile URL**: `/profile/[userId]` - View other users' profiles
+- [ ] **Privacy Controls**: Public/private/followers-only settings
+- [ ] **Profile Customization**: Bio, profile picture, featured plants
+
+### Phase 3: Follow System
+- [ ] **Follow/Unfollow**: Users can follow other gardeners
+- [ ] **Followers/Following Counts**: Display social connections
+- [ ] **Activity Feed**: See activities from followed users
+- [ ] **Notifications**: New follower alerts
+
+### Phase 4: Social Interactions
+- [ ] **Like/Comment**: Engage with activities
+- [ ] **Share Achievements**: Share harvests, milestones
+- [ ] **Leaderboards**: Most active gardeners, best success rates
+- [ ] **Community**: Garden tips, Q&A section
 
 ## 🧪 Testing
 - [ ] **Integration Tests**: Audit the app for features that need Integration Testing.
 - [ ] **Integration Tests**: Add Playwright tests for "Create New Space" functionality in PlantForm (Radix UI Select component testing is challenging in unit tests).
 - [ ] **Integration Tests**: Add Playwright tests for all appropriate features.
+
+### Edge Case Testing
+- [ ] **Activity Feed Truncation**: Test with very long note content (should truncate or wrap properly)
+- [ ] **Activity Feed Scroll**: Test with 100+ activities (performance and scroll behavior)
+- [ ] **Deleted References**: Test activity items referencing deleted plants/spaces (should handle gracefully)
+- [ ] **Empty States**: Verify all empty states display correctly (new user, no data scenarios)
+- [ ] **Garden Stats Edge Cases**: Test with no harvests, no plants, plants without harvest dates
+- [ ] **Responsive Design**: Test profile page and activity feed on mobile/tablet viewports
+- [ ] **Date Display**: Test with activities from various time ranges (minutes ago, days ago, months ago)

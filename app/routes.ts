@@ -25,6 +25,9 @@ export default [
   // Tasks
   route("/tasks", "routes/tasks.tsx"),
 
+  // Profile
+  route("/profile", "routes/profile.tsx"),
+
   // Settings
   route("/settings", "routes/settings.tsx"),
 ] satisfies RouteConfig;
