@@ -6,6 +6,7 @@ import { useAuthStore } from '~/stores/authStore';
 import { loginSchema, type LoginFormData } from '~/lib/validations/auth';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
+import { Checkbox } from '~/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -19,6 +20,7 @@ export function LoginForm() {
   const navigate = useNavigate();
   const { user, signIn, signingIn, error, clearError } = useAuthStore();
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Navigate to dashboard when user is successfully authenticated
   useEffect(() => {
@@ -38,7 +40,7 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
-      await signIn(data.email, data.password);
+      await signIn(data.email, data.password, rememberMe);
       // Navigation will happen automatically via useEffect when user state updates
     } catch (error) {
       // Error is handled by the store
@@ -85,6 +87,21 @@ export function LoginForm() {
               </FormItem>
             )}
           />
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="rememberMe"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+            />
+            <label
+              htmlFor="rememberMe"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Remember me
+            </label>
+          </div>
 
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">

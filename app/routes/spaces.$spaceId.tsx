@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useParams, Link } from 'react-router';
+import { useParams, Link } from 'react-router';
 import { ArrowLeft, Settings, StickyNote } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { ProtectedRoute } from '../components/routing/ProtectedRoute';
 import { useAuthStore } from '../stores/authStore';
 import { useSpaceStore } from '../stores/spaceStore';
 import type { GrowSpace } from '../lib/types';
@@ -28,14 +29,14 @@ const spaceTypeLabels = {
   'indoor-tent': 'Indoor Tent',
   'outdoor-bed': 'Outdoor Bed',
   'greenhouse': 'Greenhouse',
-  'hydroponic': 'Hydroponic',
+  'hydroponic': 'Hydro ponic',
   'container': 'Container',
 };
 
-export default function SpaceDetailPage() {
+function SpaceDetailContent() {
   const { spaceId } = useParams();
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const { user, loading: authLoading, error: authError } = useAuthStore();
+  const { user } = useAuthStore();
   const { spaces, loading, error, loadSpaces, updateSpace } = useSpaceStore();
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function SpaceDetailPage() {
 
   const handleUpdateSpace = async (data: { name: string; type: any; description?: string }) => {
     if (!space) return;
-    
+
     try {
       await updateSpace(space.id, data);
       setShowEditDialog(false);
@@ -56,38 +57,6 @@ export default function SpaceDetailPage() {
       console.error('Failed to update space:', error);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading authentication...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (authError) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-destructive mb-4">Authentication Error</h2>
-          <p className="text-muted-foreground mb-4">{authError}</p>
-          <button 
-            onClick={() => window.location.href = '/login'}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   if (loading && !space) {
     return (
@@ -215,7 +184,7 @@ export default function SpaceDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Temperature:</span>
                       <span>
-                        {space.environment.temperature.min}° - {space.environment.temperature.max}° 
+                        {space.environment.temperature.min}° - {space.environment.temperature.max}°
                         {space.environment.temperature.unit === 'celsius' ? 'C' : 'F'}
                       </span>
                     </div>
@@ -254,7 +223,7 @@ export default function SpaceDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <NoteList 
+          <NoteList
             spaceId={space.id}
             title="Space Notes"
             showCreateButton={true}
@@ -277,5 +246,13 @@ export default function SpaceDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function SpaceDetailPage() {
+  return (
+    <ProtectedRoute>
+      <SpaceDetailContent />
+    </ProtectedRoute>
   );
 }

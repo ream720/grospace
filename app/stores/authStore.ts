@@ -19,7 +19,7 @@ interface AuthStore extends AuthState {
 
   // Actions
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (updates: { displayName?: string; email?: string }) => Promise<void>;
@@ -51,10 +51,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  signIn: async (email: string, password: string) => {
+  signIn: async (email: string, password: string, rememberMe: boolean = false) => {
     try {
       set({ signingIn: true, error: null });
-      const user = await firebaseSignIn(email, password);
+      const user = await firebaseSignIn(email, password, rememberMe);
       set({ user, signingIn: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';

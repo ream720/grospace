@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Navigate } from "react-router";
 import { User, Settings as SettingsIcon, Bell, Shield, LogOut, Save } from "lucide-react";
 import type { Route } from "./+types/settings";
 import { useAuthStore } from "~/stores/authStore";
+import { ProtectedRoute } from "~/components/routing/ProtectedRoute";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -19,8 +19,8 @@ export function meta({ }: Route.MetaArgs) {
     ];
 }
 
-export default function Settings() {
-    const { user, loading, updateProfile, error, clearError } = useAuthStore();
+function SettingsContent() {
+    const { user, updateProfile, error, clearError } = useAuthStore();
     const { toast } = useToast();
 
     const [displayName, setDisplayName] = useState("");
@@ -54,21 +54,7 @@ export default function Settings() {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="container mx-auto py-10 px-4 max-w-4xl space-y-6">
-                <Skeleton className="h-10 w-48" />
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Skeleton className="h-40 col-span-1" />
-                    <Skeleton className="h-96 col-span-3" />
-                </div>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return <Navigate to="/login" replace />;
-    }
+    if (!user) { return null; } // ProtectedRoute handles this, but TypeScript needs this check
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-5xl">
@@ -170,5 +156,13 @@ export default function Settings() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function Settings() {
+    return (
+        <ProtectedRoute>
+            <SettingsContent />
+        </ProtectedRoute>
     );
 }

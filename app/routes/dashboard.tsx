@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { Navigate, Link } from 'react-router';
-import { Building2, Sprout, Plus, CheckSquare, StickyNote, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router';
+import { Building2, Sprout, Plus, CheckSquare, StickyNote } from 'lucide-react';
 import { isAfter } from 'date-fns';
 import type { Route } from "./+types/dashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
-import { Alert, AlertDescription } from '../components/ui/alert';
+import { ProtectedRoute } from '../components/routing/ProtectedRoute';
 import { useAuthStore } from '../stores/authStore';
 import { useSpaceStore } from '../stores/spaceStore';
 import { usePlantStore } from '../stores/plantStore';
@@ -26,8 +26,8 @@ export function meta({ }: Route.MetaArgs) {
     ];
 }
 
-export default function Dashboard() {
-    const { user, loading: authLoading, error: authError } = useAuthStore();
+function DashboardContent() {
+    const { user } = useAuthStore();
     const { spaces, loadSpaces, loading: spacesLoading } = useSpaceStore();
     const { plants, loadPlants, loading: plantsLoading } = usePlantStore();
     const { loadTasks, getUpcomingTasks, getOverdueTasks, loading: tasksLoading } = useTaskStore();
@@ -41,42 +41,6 @@ export default function Dashboard() {
             loadNotes(user.uid, { limit: 5 }); // Load recent 5 notes
         }
     }, [user, loadSpaces, loadPlants, loadTasks, loadNotes]);
-
-    if (authLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <Skeleton className="h-8 w-8 rounded-full mx-auto mb-4" />
-                    <Skeleton className="h-4 w-24 mx-auto" />
-                </div>
-            </div>
-        );
-    }
-
-    if (authError) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                        {authError}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.location.href = '/login'}
-                            className="ml-2"
-                        >
-                            Go to Login
-                        </Button>
-                    </AlertDescription>
-                </Alert>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return <Navigate to="/login" replace />;
-    }
 
     const totalPlants = plants.length;
     const activePlants = plants.filter(p => p.status !== 'harvested' && p.status !== 'removed').length;
@@ -234,5 +198,13 @@ export default function Dashboard() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function Dashboard() {
+    return (
+        <ProtectedRoute>
+            <DashboardContent />
+        </ProtectedRoute>
     );
 }

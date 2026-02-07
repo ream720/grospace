@@ -4,6 +4,9 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from './config';
@@ -29,7 +32,12 @@ export const createUser = async (
   };
 };
 
-export const signIn = async (email: string, password: string): Promise<AuthUser> => {
+export const signIn = async (email: string, password: string, rememberMe: boolean = false): Promise<AuthUser> => {
+  // Set persistence based on rememberMe preference
+  // SESSION: logout when browser closes (default)
+  // LOCAL: stay logged in across browser restarts (when rememberMe is true)
+  await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   return {
     uid: userCredential.user.uid,
