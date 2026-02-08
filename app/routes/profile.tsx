@@ -10,6 +10,7 @@ import { UserInfoCard } from '../components/profile/UserInfoCard';
 import { GardenStatsCard } from '../components/profile/GardenStatsCard';
 import { ActivityFeed } from '../components/activity/ActivityFeed';
 import { activityService } from '../lib/services/activityService';
+import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -52,14 +53,7 @@ function ProfileContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Profile</h1>
-        <p className="text-muted-foreground">
-          Your garden profile and activity
-        </p>
-      </div>
-
+    <DashboardLayout title="Profile">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - User Info */}
         <div className="space-y-6">
@@ -83,7 +77,7 @@ function ProfileContent() {
           />
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
 

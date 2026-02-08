@@ -1,2 +1,13 @@
 Plant Stages graph only shows Seedling Veg Flwoering
 New Plant from Plants page doesn't respect plant stage selection (all seedling despite selection)
+
+Dashboard:
+Log Harvest Quick Action button doesn't work
+Upcoming Tasks Mark Completed button is invisible + doesn't work
+Search Icon doesn't work
+Notifications icon doesn't work
+Quick Actions from Dashboard Add Plant should open Add Plant modal form not the Plants page
+Quick Actions from Dashboard Add Space should open Add Space modal form not the Spaces page
+Quick Actions from Dashboard Add Task should open Add Task modal form not the Tasks page
+Quick Actions change Log Harvest to Add Note
+Quick Actions from Dashboard Add Note should open Add Note modal form not the Notes page

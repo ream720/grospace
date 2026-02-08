@@ -3,6 +3,7 @@ import { PlantList } from '../components/plants';
 import { ProtectedRoute } from '../components/routing/ProtectedRoute';
 import { useAuthStore } from '../stores/authStore';
 import { useSpaceStore } from '../stores/spaceStore';
+import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 
 export function meta() {
   return [
@@ -22,16 +23,14 @@ function PlantsContent() {
   }, [user, loadSpaces]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <DashboardLayout title="My Plants">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Plants</h1>
         <p className="text-muted-foreground">
           Manage all your plants across different growing spaces
         </p>
       </div>
-
       <PlantList spaces={spaces} />
-    </div>
+    </DashboardLayout>
   );
 }
 

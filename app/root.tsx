@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 import { useEffect } from "react";
 
@@ -48,6 +49,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const theme = useThemeStore((state) => state.theme);
+  const location = useLocation();
+
+  // Hide main navbar on dashboard routes (dashboard has its own sidebar navigation)
+  const hiddenNavbarRoutes = ['/dashboard', '/spaces', '/plants', '/notes', '/tasks', '/profile', '/settings'];
+  const shouldHideNavbar = hiddenNavbarRoutes.some(route => location.pathname.startsWith(route));
 
   useEffect(() => {
     // Initialize Firebase auth state listener
@@ -77,7 +83,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      {!shouldHideNavbar && <Navbar />}
       <main>
         <Outlet />
       </main>
