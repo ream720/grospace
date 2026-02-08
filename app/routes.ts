@@ -18,6 +18,7 @@ export default [
 
   // Plants
   route("/plants", "routes/plants.tsx"),
+  route("/plants/:plantId", "routes/plants.$plantId.tsx"),
 
   // Notes
   route("/notes", "routes/notes.tsx"),

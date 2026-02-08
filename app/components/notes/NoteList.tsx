@@ -23,9 +23,9 @@ interface NoteListProps {
   title?: string;
 }
 
-export function NoteList({ 
-  spaceId, 
-  plantId, 
+export function NoteList({
+  spaceId,
+  plantId,
   showCreateButton = true,
   title = 'Notes & Observations'
 }: NoteListProps) {
@@ -53,15 +53,15 @@ export function NoteList({
   }, [searchParams, spaceId, plantId]);
 
   const { user } = useAuthStore();
-  const { 
-    notes, 
-    loading, 
-    error, 
-    createNote, 
-    updateNote, 
-    deleteNote, 
+  const {
+    notes,
+    loading,
+    error,
+    createNote,
+    updateNote,
+    deleteNote,
     loadNotes,
-    clearError 
+    clearError
   } = useNoteStore();
   const { spaces } = useSpaceStore();
   const { plants } = usePlantStore();
@@ -69,7 +69,7 @@ export function NoteList({
   // Function to update URL params when filters change
   const updateUrlParams = (newParams: Record<string, string | null>) => {
     const current = new URLSearchParams(searchParams);
-    
+
     Object.entries(newParams).forEach(([key, value]) => {
       if (value && value !== 'all') {
         current.set(key, value);
@@ -119,13 +119,17 @@ export function NoteList({
       filtered = filtered.filter(note => note.category === selectedCategory);
     }
 
-    // Space filter (only if not already filtered by spaceId prop)
-    if (!effectiveSpaceId && selectedSpace && selectedSpace !== 'all') {
+    // Space filter
+    if (effectiveSpaceId) {
+      filtered = filtered.filter(note => note.spaceId === effectiveSpaceId);
+    } else if (selectedSpace && selectedSpace !== 'all') {
       filtered = filtered.filter(note => note.spaceId === selectedSpace);
     }
 
-    // Plant filter (only if not already filtered by plantId prop)
-    if (!effectivePlantId && selectedPlant && selectedPlant !== 'all') {
+    // Plant filter
+    if (effectivePlantId) {
+      filtered = filtered.filter(note => note.plantId === effectivePlantId);
+    } else if (selectedPlant && selectedPlant !== 'all') {
       filtered = filtered.filter(note => note.plantId === selectedPlant);
     }
 
@@ -152,7 +156,7 @@ export function NoteList({
         timestamp: data.timestamp,
         photos: data.photos,
       }, user.uid);
-      
+
       setShowCreateDialog(false);
       toast.success('Note created successfully');
     } catch (error) {
@@ -179,7 +183,7 @@ export function NoteList({
         category: data.category,
         timestamp: data.timestamp,
       });
-      
+
       setEditingNote(null);
       toast.success('Note updated successfully');
     } catch (error) {
@@ -210,7 +214,7 @@ export function NoteList({
   };
 
   // Available plants for filtering (filtered by selected space if any)
-  const availablePlantsForFilter = (effectiveSpaceId || selectedSpace !== 'all') 
+  const availablePlantsForFilter = (effectiveSpaceId || selectedSpace !== 'all')
     ? plants.filter(plant => plant.spaceId === (effectiveSpaceId || selectedSpace))
     : plants;
 
@@ -223,7 +227,7 @@ export function NoteList({
           <h2 className="text-xl font-semibold">{title}</h2>
           <Badge variant="secondary">{filteredNotes.length}</Badge>
         </div>
-        
+
         {showCreateButton && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -272,11 +276,11 @@ export function NoteList({
           {(effectiveSpaceId || effectivePlantId) && (
             <div className="flex flex-wrap gap-2">
               <span className="text-sm font-medium text-muted-foreground">Active filters:</span>
-              
+
               {effectiveSpaceId && (
                 <Badge variant="outline" className="flex items-center gap-1">
                   Space: {getSpaceName(effectiveSpaceId)}
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedSpace('all');
                       updateUrlParams({ spaceId: null });
@@ -288,11 +292,11 @@ export function NoteList({
                   </button>
                 </Badge>
               )}
-              
+
               {effectivePlantId && (
                 <Badge variant="outline" className="flex items-center gap-1">
                   Plant: {getPlantName(effectivePlantId)}
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedPlant('all');
                       updateUrlParams({ plantId: null });
@@ -328,8 +332,8 @@ export function NoteList({
             </Select>
 
             {/* Space Filter */}
-            <Select 
-              value={effectiveSpaceId || selectedSpace} 
+            <Select
+              value={effectiveSpaceId || selectedSpace}
               onValueChange={(value) => {
                 setSelectedSpace(value);
                 setSelectedPlant('all'); // Clear plant filter when space changes
@@ -350,8 +354,8 @@ export function NoteList({
             </Select>
 
             {/* Plant Filter */}
-            <Select 
-              value={effectivePlantId || selectedPlant} 
+            <Select
+              value={effectivePlantId || selectedPlant}
               onValueChange={(value) => {
                 setSelectedPlant(value);
                 updateUrlParams({ plantId: value });
@@ -411,7 +415,7 @@ export function NoteList({
             <StickyNote className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No notes found</h3>
             <p className="text-muted-foreground mb-4">
-              {notes.length === 0 
+              {notes.length === 0
                 ? "Start documenting your gardening journey by creating your first note."
                 : "Try adjusting your search or filters to find what you're looking for."
               }

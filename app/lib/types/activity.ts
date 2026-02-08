@@ -87,4 +87,6 @@ export interface ActivityFilters {
   types?: ActivityType[];
   limit?: number;
   publicOnly?: boolean;
+  plantId?: string;
+  spaceId?: string;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { MoreHorizontal, Edit, Trash2, Move, Calendar, StickyNote } from 'lucide-react';
+import { Link } from 'react-router';
+import { MoreHorizontal, Edit, Trash2, Move, Calendar, StickyNote, Eye } from 'lucide-react';
 import { toDate, formatDateSafe } from '../../lib/utils/dateUtils';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -64,7 +65,7 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
   // Load note count for this plant
   useEffect(() => {
     if (!user) return;
-    
+
     const loadPlantNotes = async () => {
       try {
         const notes = await noteService.list(user.uid, { plantId: plant.id });
@@ -92,7 +93,7 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
     (date) => formatDistanceToNow(date, { addSuffix: false }),
     'Unknown'
   );
-  
+
   const canHarvest = plant.status !== 'harvested' && plant.status !== 'removed';
 
   return (
@@ -100,7 +101,9 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
           <div className="space-y-1">
-            <CardTitle className="text-lg">{plant.name}</CardTitle>
+            <Link to={`/plants/${plant.id}`} className="hover:underline">
+                <CardTitle className="text-lg">{plant.name}</CardTitle>
+            </Link>
             <p className="text-sm text-muted-foreground">{plant.variety}</p>
           </div>
           <div className="flex items-center space-x-2">
@@ -120,6 +123,10 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => window.location.href = `/plants/${plant.id}`}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit?.(plant)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
@@ -139,7 +146,7 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-destructive"
                 >
