@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
+import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from '../ui/dialog';
 import { SpaceCard } from './SpaceCard';
 import { SpaceForm } from './SpaceForm';
@@ -20,17 +21,18 @@ interface SpaceListProps {
 }
 
 export function SpaceList({ onSpaceSelect }: SpaceListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { user } = useAuthStore();
-  const { 
-    spaces, 
-    loading, 
-    error, 
-    loadSpaces, 
-    createSpace, 
-    updateSpace, 
+  const {
+    spaces,
+    loading,
+    error,
+    loadSpaces,
+    createSpace,
+    updateSpace,
     deleteSpace,
-    clearError 
+    clearError
   } = useSpaceStore();
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
 
   const handleCreateSpace = async (data: { name: string; type: any; description?: string }) => {
     if (!user) return;
-    
+
     try {
       await createSpace({
         ...data,
@@ -69,6 +71,11 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
     }
   };
 
+  const filteredSpaces = spaces.filter((space) =>
+    space.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (space.type && space.type.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   if (loading && spaces.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -95,14 +102,17 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Grow Spaces</h2>
-          <p className="text-muted-foreground">
-            Manage your growing environments
-          </p>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search spaces..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -126,24 +136,27 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
         </Dialog>
       </div>
 
-      {spaces.length === 0 ? (
+      {filteredSpaces.length === 0 ? (
         <div className="text-center py-12">
-          <div className="mx-auto max-w-sm">
-            <div className="mx-auto h-12 w-12 text-muted-foreground mb-4">
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </div>
+          {searchTerm ? (
+             <p className="text-muted-foreground">No spaces match your filters.</p>
+          ) : (
+            <div className="mx-auto max-w-sm">
+              <div className="mx-auto h-12 w-12 text-muted-foreground mb-4">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              </div>
             <h3 className="text-lg font-medium text-foreground mb-2">
               No spaces yet
             </h3>
@@ -172,10 +185,11 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
               </DialogContent>
             </Dialog>
           </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {spaces.map((space) => (
+          {filteredSpaces.map((space) => (
             <SpaceCard
               key={space.id}
               space={space}

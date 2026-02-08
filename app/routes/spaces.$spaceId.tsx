@@ -104,68 +104,71 @@ function SpaceDetailContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link to="/spaces">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Spaces
-            </Button>
-          </Link>
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
+      {/* Navigation */}
+      <div className="mb-6">
+        <Link to="/spaces" className="inline-block">
+          <Button variant="ghost" size="sm" className="-ml-3 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Spaces
+          </Button>
+        </Link>
+      </div>
+
+      {/* Header Content */}
+      <div className="mb-8">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{space.name}</h1>
-            <div className="flex items-center space-x-2 mt-1">
-              <Badge variant="secondary">
+            <h1 className="text-3xl font-bold tracking-tight mb-2">{space.name}</h1>
+
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <Badge variant="secondary" className="font-medium">
                 {spaceTypeLabels[space.type]}
               </Badge>
-              <span className="text-muted-foreground">
-                {space.plantCount} plants
+              <span className="text-sm">•</span>
+              <span className="text-sm font-medium">
+                {space.plantCount} {space.plantCount === 1 ? 'plant' : 'plants'}
               </span>
             </div>
           </div>
-        </div>
-        <Button onClick={() => setShowEditDialog(true)}>
-          <Settings className="mr-2 h-4 w-4" />
-          Edit Space
-        </Button>
-      </div>
 
-      {/* Space Info */}
-      {space.description && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{space.description}</p>
-          </CardContent>
-        </Card>
-      )}
+          <Button onClick={() => setShowEditDialog(true)} variant="outline">
+            <Settings className="mr-2 h-4 w-4" />
+            Edit Space
+          </Button>
+        </div>
+
+        {space.description && (
+          <div className="max-w-2xl">
+            <p className="text-muted-foreground leading-relaxed">
+              {space.description}
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Space Details */}
       {(space.dimensions || space.environment) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
           {space.dimensions && (
             <Card>
-              <CardHeader>
-                <CardTitle>Dimensions</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-medium">Dimensions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Length:</span>
-                    <span>{space.dimensions.length} {space.dimensions.unit}</span>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Length</span>
+                    <span className="font-medium">{space.dimensions.length} {space.dimensions.unit}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Width:</span>
-                    <span>{space.dimensions.width} {space.dimensions.unit}</span>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Width</span>
+                    <span className="font-medium">{space.dimensions.width} {space.dimensions.unit}</span>
                   </div>
                   {space.dimensions.height && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Height:</span>
-                      <span>{space.dimensions.height} {space.dimensions.unit}</span>
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Height</span>
+                      <span className="font-medium">{space.dimensions.height} {space.dimensions.unit}</span>
                     </div>
                   )}
                 </div>
@@ -175,30 +178,32 @@ function SpaceDetailContent() {
 
           {space.environment && (
             <Card>
-              <CardHeader>
-                <CardTitle>Environment</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-medium">Environment</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   {space.environment.temperature && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Temperature:</span>
-                      <span>
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Temperature</span>
+                      <span className="font-medium">
                         {space.environment.temperature.min}° - {space.environment.temperature.max}°
                         {space.environment.temperature.unit === 'celsius' ? 'C' : 'F'}
                       </span>
                     </div>
                   )}
                   {space.environment.humidity && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Humidity:</span>
-                      <span>{space.environment.humidity.min}% - {space.environment.humidity.max}%</span>
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Humidity</span>
+                      <span className="font-medium">{space.environment.humidity.min}% - {space.environment.humidity.max}%</span>
                     </div>
                   )}
                   {space.environment.lightSchedule && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Light Schedule:</span>
-                      <span>{space.environment.lightSchedule.hoursOn}h on / {space.environment.lightSchedule.hoursOff}h off</span>
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground block mb-1">Light Schedule</span>
+                      <span className="font-medium">
+                        {space.environment.lightSchedule.hoursOn}h on / {space.environment.lightSchedule.hoursOff}h off
+                      </span>
                     </div>
                   )}
                 </div>
@@ -209,27 +214,24 @@ function SpaceDetailContent() {
       )}
 
       {/* Plants in this space */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Plants in this Space</h2>
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          Plants in this Space
+          <Badge variant="outline" className="ml-2 font-normal">
+            {space.plantCount}
+          </Badge>
+        </h2>
         <PlantList spaceId={space.id} spaces={spaces} />
       </div>
 
       {/* Notes & Observations */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <StickyNote className="h-5 w-5" />
-            Space Notes & Observations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <NoteList
-            spaceId={space.id}
-            title="Space Notes"
-            showCreateButton={true}
-          />
-        </CardContent>
-      </Card>
+      <div className="mb-8">
+        <NoteList
+          spaceId={space.id}
+          title="Space Notes & Observations"
+          showCreateButton={true}
+        />
+      </div>
 
       {/* Edit Space Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>

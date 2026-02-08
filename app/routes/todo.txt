@@ -1,0 +1,2 @@
+Plant Stages graph only shows Seedling Veg Flwoering
+New Plant from Plants page doesn't respect plant stage selection (all seedling despite selection)

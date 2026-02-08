@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Sprout } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
@@ -131,6 +131,9 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
       {/* Plants grid */}
       {filteredPlants.length === 0 ? (
         <div className="text-center py-8">
+          <div className="mx-auto h-12 w-12 text-muted-foreground mb-4 flex items-center justify-center">
+            <Sprout className="h-10 w-10" />
+          </div>
           <p className="text-muted-foreground">
             {searchTerm || statusFilter !== 'all'
               ? 'No plants match your filters.'
