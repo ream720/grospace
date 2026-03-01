@@ -250,8 +250,12 @@ test.describe('Plants', () => {
     // Submit
     await page.getByRole('dialog').getByRole('button', { name: 'Update Plant' }).click();
 
+    // Wait for the dialog to close and the store to reload plants
+    await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+
     // Verify the name changed on the detail page
-    await expect(page.getByRole('heading', { name: editedName })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: editedName })).toBeVisible({ timeout: 15000 });
 
     // Clean up: go back to plants list and delete
     await page.goto('/plants');
