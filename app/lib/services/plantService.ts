@@ -11,6 +11,7 @@ export interface CreatePlantData {
   seedSource?: string;
   plantedDate: Date;
   expectedHarvestDate?: Date;
+  status?: PlantStatus;
   notes?: string;
 }
 
@@ -111,13 +112,13 @@ export class PlantService extends BaseService<Plant> {
       name: data.name.trim(),
       variety: data.variety.trim(),
       seedSource: data.seedSource?.trim(),
-      status: 'seedling' as PlantStatus, // Default status
+      status: data.status || ('seedling' as PlantStatus), // Use provided status or default to seedling
       notes: data.notes?.trim(),
     };
 
     // Create the plant
     const plantResult = await this.create(plantData);
-    
+
     if (plantResult.data) {
       // Update the space's plant count
       await spaceService.updatePlantCount(data.spaceId, space.plantCount + 1);
@@ -151,13 +152,13 @@ export class PlantService extends BaseService<Plant> {
     // First get all user plants, then filter by space in memory
     // This avoids the need for a composite index
     const userPlantsResult = await this.getUserPlants(userId);
-    
+
     if (userPlantsResult.error) {
       return userPlantsResult;
     }
 
     const spacePlants = (userPlantsResult.data || []).filter(plant => plant.spaceId === spaceId);
-    
+
     return { data: spacePlants };
   }
 
@@ -180,7 +181,7 @@ export class PlantService extends BaseService<Plant> {
     };
 
     const result = await this.list(filters);
-    
+
     // Sort in memory instead of in the query
     if (result.data) {
       result.data.sort((a, b) => {
@@ -509,7 +510,7 @@ export class PlantService extends BaseService<Plant> {
     // We need the user ID, so we'll get it from the auth store
     // This is a temporary solution - ideally the store should pass the userId
     const { user } = await import('../../stores/authStore').then(m => m.useAuthStore.getState());
-    
+
     if (!user) {
       return {
         error: {

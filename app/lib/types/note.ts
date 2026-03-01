@@ -25,6 +25,8 @@ export interface CreateNoteData {
 export interface UpdateNoteData {
   content?: string;
   category?: NoteCategory;
+  plantId?: string | null;
+  spaceId?: string | null;
   timestamp?: Date;
 }
 

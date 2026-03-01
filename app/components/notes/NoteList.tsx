@@ -134,7 +134,7 @@ export function NoteList({
     }
 
     return filtered;
-  }, [notes, searchTerm, selectedCategory, selectedSpace, selectedPlant, spaceId, plantId]);
+  }, [notes, searchTerm, selectedCategory, selectedSpace, selectedPlant, effectiveSpaceId, effectivePlantId]);
 
   const handleCreateNote = async (data: {
     content: string;
@@ -181,6 +181,8 @@ export function NoteList({
       await updateNote(editingNote.id, {
         content: data.content,
         category: data.category,
+        plantId: data.plantId ?? null,
+        spaceId: data.spaceId ?? null,
         timestamp: data.timestamp,
       });
 
@@ -453,6 +455,13 @@ export function NoteList({
             <NoteForm
               onSubmit={handleUpdateNote}
               onCancel={() => setEditingNote(null)}
+              initialPlantId={editingNote.plantId}
+              initialSpaceId={editingNote.spaceId}
+              initialContent={editingNote.content}
+              initialCategory={editingNote.category}
+              initialTimestamp={editingNote.timestamp}
+              showPhotoUpload={false}
+              submitLabel="Update Note"
               loading={formLoading}
             />
           )}

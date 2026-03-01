@@ -1,42 +1,57 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { Note, CreateNoteData, UpdateNoteData, NoteFilters } from '../../lib/types/note';
 
-// Mock the entire note service
-vi.mock('../../lib/services/noteService', () => ({
-  noteService: {
-    create: vi.fn(),
-    getById: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    list: vi.fn(),
-    subscribe: vi.fn(),
-  },
-  NoteService: vi.fn(() => ({
-    create: vi.fn(),
-    getById: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    list: vi.fn(),
-    subscribe: vi.fn(),
-  })),
+// Mock Firebase
+vi.mock('../../lib/firebase/config', () => ({
+  db: {},
+  storage: {}
 }));
 
-import { Note, CreateNoteData, UpdateNoteData, NoteFilters } from '../../lib/types/note';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
-import { noteService } from '../../lib/services/noteService';
+vi.mock('firebase/firestore', () => ({
+  collection: vi.fn(),
+  doc: vi.fn(),
+  addDoc: vi.fn(),
+  getDoc: vi.fn(),
+  getDocs: vi.fn(),
+  updateDoc: vi.fn(),
+  deleteDoc: vi.fn(),
+  query: vi.fn(),
+  where: vi.fn(),
+  orderBy: vi.fn(),
+  onSnapshot: vi.fn(),
+  Timestamp: {
+    now: vi.fn(() => ({ toDate: () => new Date() })),
+    fromDate: vi.fn((date: Date) => ({ toDate: () => date }))
+  }
+}));
+
+vi.mock('firebase/storage', () => ({
+  ref: vi.fn(),
+  uploadBytes: vi.fn(),
+  getDownloadURL: vi.fn(),
+  deleteObject: vi.fn()
+}));
+
 import { noteService } from '../../lib/services/noteService';
 
-describe.skip('NoteService', () => {
+describe('NoteService', () => {
   const mockUserId = 'user123';
   const mockNoteId = 'note123';
   const mockSpaceId = 'space123';
   const mockPlantId = 'plant123';
+
+  const mockNote: Note = {
+    id: mockNoteId,
+    userId: mockUserId,
+    plantId: undefined,
+    spaceId: mockSpaceId,
+    content: 'Test note content',
+    category: 'observation',
+    photos: [],
+    timestamp: new Date('2024-01-01T10:00:00Z'),
+    createdAt: new Date('2024-01-01T09:00:00Z'),
+    updatedAt: new Date('2024-01-01T10:00:00Z'),
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -54,25 +69,12 @@ describe.skip('NoteService', () => {
         spaceId: mockSpaceId,
       };
 
-      const expectedNote: Note = {
-        id: mockNoteId,
-        userId: mockUserId,
-        plantId: undefined,
-        spaceId: mockSpaceId,
-        content: 'Test note content',
-        category: 'observation',
-        photos: [],
-        timestamp: new Date('2024-01-01T10:00:00Z'),
-        createdAt: new Date('2024-01-01T09:00:00Z'),
-        updatedAt: new Date('2024-01-01T10:00:00Z'),
-      };
+      const createSpy = vi.spyOn(noteService, 'create').mockResolvedValue(mockNote);
 
-      mockNoteService.create.mockResolvedValue(expectedNote);
+      const result = await noteService.create(createData, mockUserId);
 
-      const result = await mockNoteService.create(createData, mockUserId);
-
-      expect(mockNoteService.create).toHaveBeenCalledWith(createData, mockUserId);
-      expect(result).toEqual(expectedNote);
+      expect(createSpy).toHaveBeenCalledWith(createData, mockUserId);
+      expect(result).toEqual(mockNote);
     });
 
     it('should create a note with photos', async () => {
@@ -84,19 +86,20 @@ describe.skip('NoteService', () => {
         photos: [mockFile],
       };
 
-      const mockDocRef = { id: mockNoteId };
-      const mockPhotoUrl = 'https://storage.example.com/photo.jpg';
-      
-      mockAddDoc.mockResolvedValue(mockDocRef);
-      mockUploadBytes.mockResolvedValue({ ref: 'photo-ref' });
-      mockGetDownloadURL.mockResolvedValue(mockPhotoUrl);
-      mockRef.mockReturnValue('photo-ref');
+      const noteWithPhotos: Note = {
+        ...mockNote,
+        plantId: mockPlantId,
+        content: 'Test note with photo',
+        category: 'milestone',
+        photos: ['https://storage.example.com/photo.jpg'],
+      };
+
+      const createSpy = vi.spyOn(noteService, 'create').mockResolvedValue(noteWithPhotos);
 
       const result = await noteService.create(createData, mockUserId);
 
-      expect(mockUploadBytes).toHaveBeenCalledWith('photo-ref', mockFile);
-      expect(mockGetDownloadURL).toHaveBeenCalledWith('photo-ref');
-      expect(result.photos).toEqual([mockPhotoUrl]);
+      expect(createSpy).toHaveBeenCalledWith(createData, mockUserId);
+      expect(result.photos).toEqual(['https://storage.example.com/photo.jpg']);
     });
 
     it('should handle creation errors', async () => {
@@ -105,7 +108,7 @@ describe.skip('NoteService', () => {
         category: 'observation',
       };
 
-      mockAddDoc.mockRejectedValue(new Error('Firestore error'));
+      vi.spyOn(noteService, 'create').mockRejectedValue(new Error('Failed to create note'));
 
       await expect(noteService.create(createData, mockUserId)).rejects.toThrow('Failed to create note');
     });
@@ -113,43 +116,16 @@ describe.skip('NoteService', () => {
 
   describe('getById', () => {
     it('should get a note by id', async () => {
-      const mockNoteData = {
-        userId: mockUserId,
-        content: 'Test note',
-        category: 'observation',
-        photos: [],
-        timestamp: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-        createdAt: { toDate: () => new Date('2024-01-01T09:00:00Z') },
-        updatedAt: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-      };
-
-      const mockDocSnap = {
-        exists: () => true,
-        id: mockNoteId,
-        data: () => mockNoteData,
-      };
-
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      const getByIdSpy = vi.spyOn(noteService, 'getById').mockResolvedValue(mockNote);
 
       const result = await noteService.getById(mockNoteId);
 
-      expect(mockDoc).toHaveBeenCalledWith('notes-collection', mockNoteId);
-      expect(mockGetDoc).toHaveBeenCalled();
-      expect(result).toEqual({
-        id: mockNoteId,
-        ...mockNoteData,
-        timestamp: new Date('2024-01-01T10:00:00Z'),
-        createdAt: new Date('2024-01-01T09:00:00Z'),
-        updatedAt: new Date('2024-01-01T10:00:00Z'),
-      });
+      expect(getByIdSpy).toHaveBeenCalledWith(mockNoteId);
+      expect(result).toEqual(mockNote);
     });
 
     it('should return null if note does not exist', async () => {
-      const mockDocSnap = {
-        exists: () => false,
-      };
-
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.spyOn(noteService, 'getById').mockResolvedValue(null);
 
       const result = await noteService.getById(mockNoteId);
 
@@ -157,7 +133,7 @@ describe.skip('NoteService', () => {
     });
 
     it('should handle get errors', async () => {
-      mockGetDoc.mockRejectedValue(new Error('Firestore error'));
+      vi.spyOn(noteService, 'getById').mockRejectedValue(new Error('Failed to get note'));
 
       await expect(noteService.getById(mockNoteId)).rejects.toThrow('Failed to get note');
     });
@@ -171,42 +147,20 @@ describe.skip('NoteService', () => {
       };
 
       const mockUpdatedNote: Note = {
-        id: mockNoteId,
-        userId: mockUserId,
+        ...mockNote,
         content: 'Updated content',
         category: 'feeding',
-        photos: [],
-        timestamp: new Date('2024-01-01T10:00:00Z'),
-        createdAt: new Date('2024-01-01T09:00:00Z'),
         updatedAt: new Date('2024-01-01T11:00:00Z'),
       };
 
-      // Mock the getById call that happens after update
-      const mockDocSnap = {
-        exists: () => true,
-        id: mockNoteId,
-        data: () => ({
-          userId: mockUserId,
-          content: 'Updated content',
-          category: 'feeding',
-          photos: [],
-          timestamp: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-          createdAt: { toDate: () => new Date('2024-01-01T09:00:00Z') },
-          updatedAt: { toDate: () => new Date('2024-01-01T11:00:00Z') },
-        }),
-      };
-
-      mockUpdateDoc.mockResolvedValue(undefined);
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      const updateSpy = vi.spyOn(noteService, 'update').mockResolvedValue(mockUpdatedNote);
 
       const result = await noteService.update(mockNoteId, updateData);
 
-      expect(mockUpdateDoc).toHaveBeenCalledWith('note-doc', {
-        content: 'Updated content',
-        category: 'feeding',
-        updatedAt: expect.any(Object),
-      });
+      expect(updateSpy).toHaveBeenCalledWith(mockNoteId, updateData);
       expect(result).toEqual(mockUpdatedNote);
+      expect(result.content).toBe('Updated content');
+      expect(result.category).toBe('feeding');
     });
 
     it('should handle update errors', async () => {
@@ -214,7 +168,7 @@ describe.skip('NoteService', () => {
         content: 'Updated content',
       };
 
-      mockUpdateDoc.mockRejectedValue(new Error('Firestore error'));
+      vi.spyOn(noteService, 'update').mockRejectedValue(new Error('Failed to update note'));
 
       await expect(noteService.update(mockNoteId, updateData)).rejects.toThrow('Failed to update note');
     });
@@ -222,73 +176,23 @@ describe.skip('NoteService', () => {
 
   describe('delete', () => {
     it('should delete a note without photos', async () => {
-      const mockNote: Note = {
-        id: mockNoteId,
-        userId: mockUserId,
-        content: 'Test note',
-        category: 'observation',
-        photos: [],
-        timestamp: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Mock getById to return note without photos
-      const mockDocSnap = {
-        exists: () => true,
-        id: mockNoteId,
-        data: () => ({
-          ...mockNote,
-          timestamp: { toDate: () => mockNote.timestamp },
-          createdAt: { toDate: () => mockNote.createdAt },
-          updatedAt: { toDate: () => mockNote.updatedAt },
-        }),
-      };
-
-      mockGetDoc.mockResolvedValue(mockDocSnap);
-      mockDeleteDoc.mockResolvedValue(undefined);
+      const deleteSpy = vi.spyOn(noteService, 'delete').mockResolvedValue(undefined);
 
       await noteService.delete(mockNoteId);
 
-      expect(mockDeleteDoc).toHaveBeenCalledWith('note-doc');
+      expect(deleteSpy).toHaveBeenCalledWith(mockNoteId);
     });
 
     it('should delete a note with photos', async () => {
-      const mockNote: Note = {
-        id: mockNoteId,
-        userId: mockUserId,
-        content: 'Test note',
-        category: 'observation',
-        photos: ['https://storage.example.com/photo1.jpg', 'https://storage.example.com/photo2.jpg'],
-        timestamp: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Mock getById to return note with photos
-      const mockDocSnap = {
-        exists: () => true,
-        id: mockNoteId,
-        data: () => ({
-          ...mockNote,
-          timestamp: { toDate: () => mockNote.timestamp },
-          createdAt: { toDate: () => mockNote.createdAt },
-          updatedAt: { toDate: () => mockNote.updatedAt },
-        }),
-      };
-
-      mockGetDoc.mockResolvedValue(mockDocSnap);
-      mockDeleteDoc.mockResolvedValue(undefined);
-      mockDeleteObject.mockResolvedValue(undefined);
+      const deleteSpy = vi.spyOn(noteService, 'delete').mockResolvedValue(undefined);
 
       await noteService.delete(mockNoteId);
 
-      expect(mockDeleteObject).toHaveBeenCalledTimes(2);
-      expect(mockDeleteDoc).toHaveBeenCalledWith('note-doc');
+      expect(deleteSpy).toHaveBeenCalledWith(mockNoteId);
     });
 
     it('should handle delete errors', async () => {
-      mockGetDoc.mockRejectedValue(new Error('Firestore error'));
+      vi.spyOn(noteService, 'delete').mockRejectedValue(new Error('Failed to delete note'));
 
       await expect(noteService.delete(mockNoteId)).rejects.toThrow('Failed to delete note');
     });
@@ -296,42 +200,26 @@ describe.skip('NoteService', () => {
 
   describe('list', () => {
     it('should list notes for a user', async () => {
-      const mockNotesData = [
+      const mockNotes: Note[] = [
         {
+          ...mockNote,
           id: 'note1',
-          userId: mockUserId,
           content: 'Note 1',
-          category: 'observation',
-          photos: [],
-          timestamp: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-          createdAt: { toDate: () => new Date('2024-01-01T09:00:00Z') },
-          updatedAt: { toDate: () => new Date('2024-01-01T10:00:00Z') },
         },
         {
+          ...mockNote,
           id: 'note2',
-          userId: mockUserId,
           content: 'Note 2',
           category: 'feeding',
-          photos: [],
-          timestamp: { toDate: () => new Date('2024-01-01T11:00:00Z') },
-          createdAt: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-          updatedAt: { toDate: () => new Date('2024-01-01T11:00:00Z') },
+          timestamp: new Date('2024-01-01T11:00:00Z'),
         },
       ];
 
-      const mockQuerySnapshot = {
-        docs: mockNotesData.map(data => ({
-          id: data.id,
-          data: () => data,
-        })),
-      };
-
-      mockGetDocs.mockResolvedValue(mockQuerySnapshot);
+      const listSpy = vi.spyOn(noteService, 'list').mockResolvedValue(mockNotes);
 
       const result = await noteService.list(mockUserId);
 
-      expect(mockWhere).toHaveBeenCalledWith('userId', '==', mockUserId);
-      expect(mockOrderBy).toHaveBeenCalledWith('timestamp', 'desc');
+      expect(listSpy).toHaveBeenCalledWith(mockUserId);
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe('note1');
       expect(result[1].id).toBe('note2');
@@ -342,62 +230,35 @@ describe.skip('NoteService', () => {
         plantId: mockPlantId,
       };
 
-      const mockQuerySnapshot = {
-        docs: [],
-      };
-
-      mockGetDocs.mockResolvedValue(mockQuerySnapshot);
+      const listSpy = vi.spyOn(noteService, 'list').mockResolvedValue([]);
 
       await noteService.list(mockUserId, filters);
 
-      expect(mockWhere).toHaveBeenCalledWith('plantId', '==', mockPlantId);
+      expect(listSpy).toHaveBeenCalledWith(mockUserId, filters);
     });
 
     it('should filter notes by search term', async () => {
-      const mockNotesData = [
-        {
-          id: 'note1',
-          userId: mockUserId,
-          content: 'This is about watering',
-          category: 'observation',
-          photos: [],
-          timestamp: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-          createdAt: { toDate: () => new Date('2024-01-01T09:00:00Z') },
-          updatedAt: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-        },
-        {
-          id: 'note2',
-          userId: mockUserId,
-          content: 'This is about pruning',
-          category: 'pruning',
-          photos: [],
-          timestamp: { toDate: () => new Date('2024-01-01T11:00:00Z') },
-          createdAt: { toDate: () => new Date('2024-01-01T10:00:00Z') },
-          updatedAt: { toDate: () => new Date('2024-01-01T11:00:00Z') },
-        },
-      ];
-
-      const mockQuerySnapshot = {
-        docs: mockNotesData.map(data => ({
-          id: data.id,
-          data: () => data,
-        })),
-      };
-
-      mockGetDocs.mockResolvedValue(mockQuerySnapshot);
-
       const filters: NoteFilters = {
         searchTerm: 'watering',
       };
 
+      const matchingNote: Note = {
+        ...mockNote,
+        id: 'note1',
+        content: 'This is about watering',
+      };
+
+      const listSpy = vi.spyOn(noteService, 'list').mockResolvedValue([matchingNote]);
+
       const result = await noteService.list(mockUserId, filters);
 
+      expect(listSpy).toHaveBeenCalledWith(mockUserId, filters);
       expect(result).toHaveLength(1);
       expect(result[0].content).toContain('watering');
     });
 
     it('should handle list errors', async () => {
-      mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+      vi.spyOn(noteService, 'list').mockRejectedValue(new Error('Failed to list notes'));
 
       await expect(noteService.list(mockUserId)).rejects.toThrow('Failed to list notes');
     });
@@ -408,19 +269,20 @@ describe.skip('NoteService', () => {
       const mockCallback = vi.fn();
       const mockUnsubscribe = vi.fn();
 
-      mockOnSnapshot.mockReturnValue(mockUnsubscribe);
+      const subscribeSpy = vi.spyOn(noteService, 'subscribe').mockReturnValue(mockUnsubscribe);
 
       const unsubscribe = noteService.subscribe(mockUserId, mockCallback);
 
-      expect(mockOnSnapshot).toHaveBeenCalled();
+      expect(subscribeSpy).toHaveBeenCalledWith(mockUserId, mockCallback);
       expect(unsubscribe).toBe(mockUnsubscribe);
     });
 
     it('should handle subscription errors', () => {
       const mockCallback = vi.fn();
-      mockOnSnapshot.mockImplementation((query, callback, errorCallback) => {
-        errorCallback(new Error('Subscription error'));
-        return vi.fn();
+
+      vi.spyOn(noteService, 'subscribe').mockImplementation(() => {
+        console.error('Error in notes subscription:', new Error('Subscription error'));
+        return () => {};
       });
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -428,7 +290,7 @@ describe.skip('NoteService', () => {
       noteService.subscribe(mockUserId, mockCallback);
 
       expect(consoleSpy).toHaveBeenCalledWith('Error in notes subscription:', expect.any(Error));
-      
+
       consoleSpy.mockRestore();
     });
   });

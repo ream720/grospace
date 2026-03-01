@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { NoteCard } from '../../../components/notes/NoteCard';
-import { Note } from '../../../lib/types/note';
-import { beforeEach } from 'node:test';
+import type { Note } from '../../../lib/types/note';
+import { beforeEach } from 'vitest';
 
 // Mock date-fns
 vi.mock('date-fns', () => ({

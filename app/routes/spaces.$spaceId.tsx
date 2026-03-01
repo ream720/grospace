@@ -29,7 +29,7 @@ const spaceTypeLabels = {
   'indoor-tent': 'Indoor Tent',
   'outdoor-bed': 'Outdoor Bed',
   'greenhouse': 'Greenhouse',
-  'hydroponic': 'Hydro ponic',
+  'hydroponic': 'Hydroponic',
   'container': 'Container',
 };
 

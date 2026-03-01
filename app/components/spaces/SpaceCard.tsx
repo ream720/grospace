@@ -36,6 +36,7 @@ import { Badge } from '../ui/badge';
 
 interface SpaceCardProps {
   space: GrowSpace;
+  noteCount?: number;
   onUpdate: (id: string, updates: Partial<GrowSpace>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onClick?: (space: GrowSpace) => void;
@@ -49,29 +50,31 @@ const spaceTypeLabels: Record<string, string> = {
   'container': 'Container',
 };
 
-export function SpaceCard({ space, onUpdate, onDelete, onClick }: SpaceCardProps) {
+export function SpaceCard({ space, noteCount, onUpdate, onDelete, onClick }: SpaceCardProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [noteCount, setNoteCount] = useState(0);
+  const [fallbackNoteCount, setFallbackNoteCount] = useState(0);
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  // Load note count for this space
+  // Backward-compatible fallback when noteCount is not provided by parent.
   useEffect(() => {
-    if (!user) return;
+    if (noteCount !== undefined || !user) return;
     
     const loadSpaceNotes = async () => {
       try {
         const notes = await noteService.list(user.uid, { spaceId: space.id });
-        setNoteCount(notes.length);
+        setFallbackNoteCount(notes.length);
       } catch (error) {
         console.error('Failed to load space notes:', error);
       }
     };
 
     loadSpaceNotes();
-  }, [user, space.id]);
+  }, [noteCount, user, space.id]);
+
+  const resolvedNoteCount = noteCount ?? fallbackNoteCount;
 
   const handleUpdate = async (data: { name: string; type: any; description?: string }) => {
     setIsUpdating(true);
@@ -110,10 +113,10 @@ export function SpaceCard({ space, onUpdate, onDelete, onClick }: SpaceCardProps
         <div className="flex-1" onClick={handleCardClick}>
           <CardTitle className="text-lg flex items-center gap-2">
             {space.name}
-            {noteCount > 0 && (
+            {resolvedNoteCount > 0 && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <StickyNote className="h-3 w-3" />
-                {noteCount}
+                {resolvedNoteCount}
               </Badge>
             )}
           </CardTitle>
@@ -130,7 +133,7 @@ export function SpaceCard({ space, onUpdate, onDelete, onClick }: SpaceCardProps
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => navigate(`/notes?spaceId=${space.id}`)}>
               <StickyNote className="mr-2 h-4 w-4" />
-              View Notes ({noteCount})
+              View Notes ({resolvedNoteCount})
             </DropdownMenuItem>
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
               <DialogTrigger asChild>

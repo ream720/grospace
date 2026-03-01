@@ -14,6 +14,7 @@ import { SpaceCard } from './SpaceCard';
 import { SpaceForm } from './SpaceForm';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useAuthStore } from '../../stores/authStore';
+import { noteService } from '../../lib/services/noteService';
 import type { GrowSpace } from '../../lib/types';
 
 interface SpaceListProps {
@@ -23,6 +24,7 @@ interface SpaceListProps {
 export function SpaceList({ onSpaceSelect }: SpaceListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [noteCountsBySpace, setNoteCountsBySpace] = useState<Record<string, number>>({});
   const { user } = useAuthStore();
   const {
     spaces,
@@ -40,6 +42,24 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
       loadSpaces();
     }
   }, [user, loadSpaces]);
+
+  useEffect(() => {
+    if (!user) {
+      setNoteCountsBySpace({});
+      return;
+    }
+
+    const unsubscribe = noteService.subscribe(user.uid, (notes) => {
+      const counts: Record<string, number> = {};
+      notes.forEach((note) => {
+        if (!note.spaceId) return;
+        counts[note.spaceId] = (counts[note.spaceId] || 0) + 1;
+      });
+      setNoteCountsBySpace(counts);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const handleCreateSpace = async (data: { name: string; type: any; description?: string }) => {
     if (!user) return;
@@ -193,6 +213,7 @@ export function SpaceList({ onSpaceSelect }: SpaceListProps) {
             <SpaceCard
               key={space.id}
               space={space}
+              noteCount={noteCountsBySpace[space.id] || 0}
               onUpdate={handleUpdateSpace}
               onDelete={handleDeleteSpace}
               onClick={onSpaceSelect}

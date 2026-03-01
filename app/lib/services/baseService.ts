@@ -45,6 +45,53 @@ export abstract class BaseService<T extends FirestoreDocument> {
   }
 
   /**
+   * Recursively convert Firestore timestamp-like values into Date objects.
+   */
+  private convertFirestoreDates(value: unknown): unknown {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (value instanceof Date) {
+      return value;
+    }
+
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as { toDate?: unknown }).toDate === 'function'
+    ) {
+      try {
+        return (value as { toDate: () => Date }).toDate();
+      } catch {
+        return value;
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => this.convertFirestoreDates(item));
+    }
+
+    if (typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => [
+          key,
+          this.convertFirestoreDates(nestedValue),
+        ])
+      );
+    }
+
+    return value;
+  }
+
+  private mapDocument(id: string, data: DocumentData): T {
+    return {
+      ...(this.convertFirestoreDates(data) as Record<string, unknown>),
+      id,
+    } as T;
+  }
+
+  /**
    * Create a new document in the collection
    */
   async create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceResult<T>> {
@@ -74,24 +121,7 @@ export abstract class BaseService<T extends FirestoreDocument> {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        const converted: any = {
-          id: docSnap.id,
-          ...data,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
-        };
-        
-        // Convert other date fields if they exist
-        if (data.dueDate?.toDate) {
-          converted.dueDate = data.dueDate.toDate();
-        }
-        if (data.completedAt?.toDate) {
-          converted.completedAt = data.completedAt.toDate();
-        }
-        
-        const document = converted as T;
-        
+        const document = this.mapDocument(docSnap.id, docSnap.data());
         return { data: document };
       }
       
@@ -156,25 +186,9 @@ export abstract class BaseService<T extends FirestoreDocument> {
       const q = query(collection(db, this.collectionName), ...constraints);
       const querySnapshot = await getDocs(q);
       
-      const documents = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const converted: any = {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
-        };
-        
-        // Convert other date fields if they exist
-        if (data.dueDate?.toDate) {
-          converted.dueDate = data.dueDate.toDate();
-        }
-        if (data.completedAt?.toDate) {
-          converted.completedAt = data.completedAt.toDate();
-        }
-        
-        return converted;
-      }) as T[];
+      const documents = querySnapshot.docs.map((snapshotDoc) =>
+        this.mapDocument(snapshotDoc.id, snapshotDoc.data())
+      );
 
       return { data: documents };
     } catch (error) {
@@ -209,25 +223,9 @@ export abstract class BaseService<T extends FirestoreDocument> {
       return onSnapshot(
         q,
         (querySnapshot) => {
-          const documents = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const converted: any = {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate(),
-              updatedAt: data.updatedAt?.toDate(),
-            };
-            
-            // Convert other date fields if they exist
-            if (data.dueDate?.toDate) {
-              converted.dueDate = data.dueDate.toDate();
-            }
-            if (data.completedAt?.toDate) {
-              converted.completedAt = data.completedAt.toDate();
-            }
-            
-            return converted;
-          }) as T[];
+          const documents = querySnapshot.docs.map((snapshotDoc) =>
+            this.mapDocument(snapshotDoc.id, snapshotDoc.data())
+          );
           
           callback({ data: documents });
         },
@@ -255,14 +253,7 @@ export abstract class BaseService<T extends FirestoreDocument> {
         docRef,
         (docSnap) => {
           if (docSnap.exists()) {
-            const data = docSnap.data();
-            const document = {
-              id: docSnap.id,
-              ...data,
-              createdAt: data.createdAt?.toDate(),
-              updatedAt: data.updatedAt?.toDate(),
-            } as T;
-            
+            const document = this.mapDocument(docSnap.id, docSnap.data());
             callback({ data: document });
           } else {
             callback({ error: { code: 'NOT_FOUND', message: 'Document not found' } });

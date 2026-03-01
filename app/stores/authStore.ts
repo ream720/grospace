@@ -124,22 +124,46 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
 // Initialize auth state listener outside of the store
 let authInitialized = false;
+const AUTH_INIT_TIMEOUT_MS = 10000;
 
 export const initializeAuth = () => {
   if (authInitialized) return;
 
   authInitialized = true;
+  const initialStore = useAuthStore.getState();
+  initialStore.setLoading(true);
+  initialStore.setError(null);
 
-  onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+  const initTimeoutId = setTimeout(() => {
     const store = useAuthStore.getState();
-
-    if (firebaseUser) {
-      const user = formatAuthUser(firebaseUser);
-      store.setUser(user);
-    } else {
-      store.setUser(null);
+    if (store.loading) {
+      store.setError('Authentication initialization timed out. Please refresh and try again.');
+      store.setLoading(false);
     }
+  }, AUTH_INIT_TIMEOUT_MS);
 
-    store.setLoading(false);
-  });
+  onAuthStateChanged(
+    auth,
+    (firebaseUser: FirebaseUser | null) => {
+      clearTimeout(initTimeoutId);
+      const store = useAuthStore.getState();
+
+      if (firebaseUser) {
+        const user = formatAuthUser(firebaseUser);
+        store.setUser(user);
+      } else {
+        store.setUser(null);
+      }
+
+      store.setError(null);
+      store.setLoading(false);
+    },
+    (error) => {
+      clearTimeout(initTimeoutId);
+      const store = useAuthStore.getState();
+      store.setUser(null);
+      store.setError(error instanceof Error ? error.message : 'Failed to initialize authentication');
+      store.setLoading(false);
+    }
+  );
 };

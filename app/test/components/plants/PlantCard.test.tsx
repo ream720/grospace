@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { PlantCard } from '../../../components/plants/PlantCard';
 import type { Plant } from '../../../lib/types';
 
@@ -43,8 +44,12 @@ describe('PlantCard - Core Functionality', () => {
     vi.clearAllMocks();
   });
 
+  const renderWithRouter = (ui: React.ReactElement) => {
+    return render(<MemoryRouter>{ui}</MemoryRouter>);
+  };
+
   it('should render plant information correctly', () => {
-    render(
+    renderWithRouter(
       <PlantCard
         plant={mockPlant}
         onEdit={mockOnEdit}
@@ -61,7 +66,7 @@ describe('PlantCard - Core Functionality', () => {
   });
 
   it('should display correct status badge colors', () => {
-    render(
+    renderWithRouter(
       <PlantCard
         plant={mockPlant}
         onEdit={mockOnEdit}
@@ -77,8 +82,8 @@ describe('PlantCard - Core Functionality', () => {
 
   it('should handle different plant statuses', () => {
     const harvestedPlant = { ...mockPlant, status: 'harvested' as const };
-    
-    render(
+
+    renderWithRouter(
       <PlantCard
         plant={harvestedPlant}
         onEdit={mockOnEdit}
@@ -105,7 +110,7 @@ describe('PlantCard - Core Functionality', () => {
       updatedAt: new Date('2024-01-01'),
     };
 
-    render(
+    renderWithRouter(
       <PlantCard
         plant={minimalPlant}
         onEdit={mockOnEdit}
@@ -117,7 +122,7 @@ describe('PlantCard - Core Functionality', () => {
     expect(screen.getByText('Minimal Plant')).toBeInTheDocument();
     expect(screen.getByText('Unknown Variety')).toBeInTheDocument();
     expect(screen.getByText('Seedling')).toBeInTheDocument();
-    
+
     // Should not show optional fields
     expect(screen.queryByText('Local Nursery')).not.toBeInTheDocument();
     expect(screen.queryByText('Growing well')).not.toBeInTheDocument();
@@ -132,7 +137,7 @@ describe('PlantCard - Core Functionality', () => {
 
     // Should not throw an error
     expect(() => {
-      render(
+      renderWithRouter(
         <PlantCard
           plant={plantWithInvalidDate}
           onEdit={mockOnEdit}
@@ -156,7 +161,7 @@ describe('PlantCard - Core Functionality', () => {
 
     statuses.forEach(({ status, label, classes }) => {
       const testPlant = { ...mockPlant, status };
-      const { unmount } = render(
+      const { unmount } = renderWithRouter(
         <PlantCard
           plant={testPlant}
           onEdit={mockOnEdit}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 
-import { Dialog, DialogContent } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { useToast } from '../ui/use-toast';
 
@@ -21,7 +21,7 @@ import type { NoteCategory } from '../../lib/types/note';
 export function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuthStore();
-  
+
   // Task store
   const {
     tasks,
@@ -122,7 +122,7 @@ export function TasksPage() {
   };
 
   const handleTaskCompletion = async (
-    taskId: string, 
+    taskId: string,
     noteData?: {
       content: string;
       category: NoteCategory;
@@ -132,7 +132,7 @@ export function TasksPage() {
   ) => {
     try {
       await completeTask(taskId);
-      
+
       // Create note if provided
       if (noteData && user) {
         await createNote({
@@ -146,7 +146,7 @@ export function TasksPage() {
 
       toast({
         title: 'Success',
-        description: noteData 
+        description: noteData
           ? 'Task completed and note added successfully'
           : 'Task completed successfully',
       });
@@ -203,6 +203,9 @@ export function TasksPage() {
       {/* Task Form Dialog */}
       <Dialog open={showTaskForm} onOpenChange={setShowTaskForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingTask ? 'Edit Task' : 'Create New Task'}</DialogTitle>
+          </DialogHeader>
           <TaskForm
             task={editingTask || undefined}
             spaces={spaces}

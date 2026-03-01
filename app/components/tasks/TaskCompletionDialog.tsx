@@ -78,7 +78,7 @@ export function TaskCompletionDialog({
     setIsSubmitting(true);
     try {
       let noteData;
-      
+
       if (data.createNote && data.noteContent?.trim()) {
         noteData = {
           content: data.noteContent.trim(),
@@ -89,7 +89,7 @@ export function TaskCompletionDialog({
       }
 
       await onComplete(task.id, noteData);
-      
+
       // Reset form and close dialog
       reset();
       onOpenChange(false);
@@ -122,7 +122,7 @@ export function TaskCompletionDialog({
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           {/* Task Details */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+          <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-lg space-y-2">
             <h4 className="font-medium">{task.title}</h4>
             {task.description && (
               <p className="text-sm text-muted-foreground">{task.description}</p>
@@ -135,7 +135,7 @@ export function TaskCompletionDialog({
                 {task.priority}
               </Badge>
             </div>
-            
+
             {/* Associated Space/Plant */}
             {(associatedSpace || associatedPlant) && (
               <div className="flex items-center space-x-2 mt-2">
@@ -170,7 +170,7 @@ export function TaskCompletionDialog({
             </div>
 
             {watchCreateNote && (
-              <div className="space-y-4 pl-6 border-l-2 border-gray-200">
+              <div className="space-y-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
                 <div className="space-y-2">
                   <Label htmlFor="noteCategory">Category</Label>
                   <Select

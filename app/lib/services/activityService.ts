@@ -38,6 +38,8 @@ export class ActivityService {
           noteId: note.id,
           content: note.content.slice(0, 150), // Truncate for preview
           category: note.category,
+          plantId: note.plantId,
+          spaceId: note.spaceId,
           plantName: plant?.name,
           spaceName: space?.name,
         },
@@ -60,6 +62,8 @@ export class ActivityService {
           data: {
             taskId: task.id,
             title: task.title,
+            plantId: task.plantId,
+            spaceId: task.spaceId,
             plantName: plant?.name,
             spaceName: space?.name,
           },
@@ -80,6 +84,7 @@ export class ActivityService {
           plantId: plant.id,
           plantName: plant.name,
           variety: plant.variety,
+          spaceId: plant.spaceId,
           spaceName: space?.name,
         },
       });
@@ -139,31 +144,33 @@ export class ActivityService {
 
     if (filters?.plantId) {
       filtered = filtered.filter(activity => {
-        // Check if activity is related to this plant
         if (activity.type === 'note_created') {
-          return (activity as any).data.plantName === plants.find(p => p.id === filters.plantId)?.name;
+          return activity.data.plantId === filters.plantId;
         }
         if (activity.type === 'task_completed') {
-           // We might need to check task plantId if available, but for now check name if available in data
-           // Ideally tasks should have plantId in data, but let's check what we have
-           return (activity as any).data.plantName === plants.find(p => p.id === filters.plantId)?.name;
+          return activity.data.plantId === filters.plantId;
         }
-        if (['plant_added', 'plant_harvested', 'plant_status_changed'].includes(activity.type)) {
-             return (activity as any).data.plantId === filters.plantId;
+        if (
+          activity.type === 'plant_added' ||
+          activity.type === 'plant_harvested' ||
+          activity.type === 'plant_status_changed'
+        ) {
+          return activity.data.plantId === filters.plantId;
         }
         return false;
       });
     }
 
     if (filters?.spaceId) {
-        filtered = filtered.filter(activity => {
-             // Basic implementation for space filtering
-             if (activity.type === 'space_created') {
-                 return (activity as any).data.spaceId === filters.spaceId;
-             }
-             // check other types if they have spaceName
-             return (activity as any).data.spaceName === spaces.find(s => s.id === filters.spaceId)?.name;
-        });
+      filtered = filtered.filter(activity => {
+        if (activity.type === 'space_created') {
+          return activity.data.spaceId === filters.spaceId;
+        }
+        if (activity.type === 'note_created' || activity.type === 'task_completed' || activity.type === 'plant_added') {
+          return activity.data.spaceId === filters.spaceId;
+        }
+        return false;
+      });
     }
 
     return filtered;

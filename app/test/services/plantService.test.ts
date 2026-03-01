@@ -49,7 +49,7 @@ describe('PlantService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new PlantService();
-    
+
     // Get references to the mocked methods
     mockCreate = service.create as Mock;
     mockGetById = service.getById as Mock;
@@ -57,7 +57,7 @@ describe('PlantService', () => {
     mockDelete = service.delete as Mock;
     mockList = service.list as Mock;
     mockSubscribe = service.subscribe as Mock;
-    
+
     mockSpaceGetById = spaceService.getById as Mock;
     mockSpaceUpdatePlantCount = spaceService.updatePlantCount as Mock;
   });
@@ -152,6 +152,95 @@ describe('PlantService', () => {
         message: 'Invalid space ID',
       });
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('should validate plantedDate is required', async () => {
+      const result = await service.createPlant({
+        ...validPlantData,
+        plantedDate: null as any,
+      });
+
+      expect(result.data).toBeUndefined();
+      expect(result.error).toEqual({
+        code: 'VALIDATION_ERROR',
+        message: 'Planted date is required',
+      });
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUserPlants - date sorting', () => {
+    it('should sort plants by plantedDate in descending order (native Date objects)', async () => {
+      const plants: Plant[] = [
+        {
+          id: 'plant1', spaceId: 'space123', userId: 'user123',
+          name: 'Old Plant', variety: 'V1',
+          plantedDate: new Date('2024-01-01'),
+          status: 'seedling', createdAt: new Date(), updatedAt: new Date(),
+        },
+        {
+          id: 'plant2', spaceId: 'space123', userId: 'user123',
+          name: 'New Plant', variety: 'V2',
+          plantedDate: new Date('2024-06-15'),
+          status: 'vegetative', createdAt: new Date(), updatedAt: new Date(),
+        },
+        {
+          id: 'plant3', spaceId: 'space123', userId: 'user123',
+          name: 'Middle Plant', variety: 'V3',
+          plantedDate: new Date('2024-03-10'),
+          status: 'flowering', createdAt: new Date(), updatedAt: new Date(),
+        },
+      ];
+
+      mockList.mockResolvedValue({ data: [...plants] });
+
+      const result = await service.getUserPlants('user123');
+
+      expect(result.error).toBeUndefined();
+      expect(result.data).toHaveLength(3);
+      // Descending: newest first
+      expect(result.data![0].id).toBe('plant2'); // Jun 15
+      expect(result.data![1].id).toBe('plant3'); // Mar 10
+      expect(result.data![2].id).toBe('plant1'); // Jan 01
+    });
+
+    it('should sort plants by plantedDate when dates are ISO strings (Firestore edge case)', async () => {
+      // Simulate Firestore returning string dates instead of Date objects
+      const plants: Plant[] = [
+        {
+          id: 'plant1', spaceId: 'space123', userId: 'user123',
+          name: 'Old Plant', variety: 'V1',
+          plantedDate: '2024-01-01T00:00:00.000Z' as any,
+          status: 'seedling', createdAt: new Date(), updatedAt: new Date(),
+        },
+        {
+          id: 'plant2', spaceId: 'space123', userId: 'user123',
+          name: 'New Plant', variety: 'V2',
+          plantedDate: '2024-06-15T00:00:00.000Z' as any,
+          status: 'vegetative', createdAt: new Date(), updatedAt: new Date(),
+        },
+      ];
+
+      mockList.mockResolvedValue({ data: [...plants] });
+
+      const result = await service.getUserPlants('user123');
+
+      expect(result.error).toBeUndefined();
+      expect(result.data).toHaveLength(2);
+      // Should still sort correctly even with string dates
+      expect(result.data![0].id).toBe('plant2'); // Jun 15 (newer)
+      expect(result.data![1].id).toBe('plant1'); // Jan 01 (older)
+    });
+
+    it('should validate userId is required for getUserPlants', async () => {
+      const result = await service.getUserPlants('');
+
+      expect(result.data).toBeUndefined();
+      expect(result.error).toEqual({
+        code: 'VALIDATION_ERROR',
+        message: 'User ID is required',
+      });
+      expect(mockList).not.toHaveBeenCalled();
     });
   });
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { MoreHorizontal, Edit, Trash2, Move, Calendar, StickyNote, Eye } from 'lucide-react';
-import { toDate, formatDateSafe } from '../../lib/utils/dateUtils';
+import { formatDateSafe } from '../../lib/utils/dateUtils';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -31,6 +31,7 @@ import { noteService } from '../../lib/services/noteService';
 
 interface PlantCardProps {
   plant: Plant;
+  noteCount?: number;
   onEdit?: (plant: Plant) => void;
   onMove?: (plant: Plant) => void;
   onHarvest?: (plant: Plant) => void;
@@ -52,9 +53,10 @@ const statusLabels = {
   removed: 'Removed',
 };
 
-export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) {
+export function PlantCard({ plant, noteCount, onEdit, onMove, onHarvest }: PlantCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [noteCount, setNoteCount] = useState(0);
+  const [fallbackNoteCount, setFallbackNoteCount] = useState(0);
+  const navigate = useNavigate();
   const { deletePlant } = usePlantStore();
   const { spaces } = useSpaceStore();
   const { user } = useAuthStore();
@@ -62,21 +64,23 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
   // Get the space name for this plant
   const spaceName = plant.spaceId ? spaces.find(s => s.id === plant.spaceId)?.name : null;
 
-  // Load note count for this plant
+  // Backward-compatible fallback when noteCount is not provided by parent.
   useEffect(() => {
-    if (!user) return;
+    if (noteCount !== undefined || !user) return;
 
     const loadPlantNotes = async () => {
       try {
         const notes = await noteService.list(user.uid, { plantId: plant.id });
-        setNoteCount(notes.length);
+        setFallbackNoteCount(notes.length);
       } catch (error) {
         console.error('Failed to load plant notes:', error);
       }
     };
 
     loadPlantNotes();
-  }, [user, plant.id]);
+  }, [noteCount, user, plant.id]);
+
+  const resolvedNoteCount = noteCount ?? fallbackNoteCount;
 
   const handleDelete = async () => {
     try {
@@ -87,7 +91,6 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
     }
   };
 
-  const plantedDate = toDate(plant.plantedDate);
   const daysSincePlanted = formatDateSafe(
     plant.plantedDate,
     (date) => formatDistanceToNow(date, { addSuffix: false }),
@@ -110,10 +113,10 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
             <Badge className={statusColors[plant.status]}>
               {statusLabels[plant.status]}
             </Badge>
-            {noteCount > 0 && (
+            {resolvedNoteCount > 0 && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <StickyNote className="h-3 w-3" />
-                {noteCount}
+                {resolvedNoteCount}
               </Badge>
             )}
             <DropdownMenu>
@@ -123,7 +126,7 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.location.href = `/plants/${plant.id}`}>
+                <DropdownMenuItem onClick={() => navigate(`/plants/${plant.id}`)}>
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
@@ -131,9 +134,9 @@ export function PlantCard({ plant, onEdit, onMove, onHarvest }: PlantCardProps) 
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = `/notes?plantId=${plant.id}`}>
+                <DropdownMenuItem onClick={() => navigate(`/notes?plantId=${plant.id}`)}>
                   <StickyNote className="mr-2 h-4 w-4" />
-                  View Notes ({noteCount})
+                  View Notes ({resolvedNoteCount})
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onMove?.(plant)}>
                   <Move className="mr-2 h-4 w-4" />

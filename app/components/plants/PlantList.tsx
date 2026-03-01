@@ -21,6 +21,8 @@ import {
 } from '../ui/dialog';
 import type { Plant, GrowSpace, PlantStatus } from '../../lib/types';
 import { usePlantStore } from '../../stores/plantStore';
+import { useAuthStore } from '../../stores/authStore';
+import { noteService } from '../../lib/services/noteService';
 
 interface PlantListProps {
   spaceId?: string;
@@ -35,12 +37,32 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
   const [movingPlant, setMovingPlant] = useState<Plant | null>(null);
   const [harvestingPlant, setHarvestingPlant] = useState<Plant | null>(null);
+  const [noteCountsByPlant, setNoteCountsByPlant] = useState<Record<string, number>>({});
 
+  const { user } = useAuthStore();
   const { plants, loading, error, loadPlants, getPlantsBySpace } = usePlantStore();
 
   useEffect(() => {
     loadPlants(spaceId);
   }, [spaceId, loadPlants]);
+
+  useEffect(() => {
+    if (!user) {
+      setNoteCountsByPlant({});
+      return;
+    }
+
+    const unsubscribe = noteService.subscribe(user.uid, (notes) => {
+      const counts: Record<string, number> = {};
+      notes.forEach((note) => {
+        if (!note.plantId) return;
+        counts[note.plantId] = (counts[note.plantId] || 0) + 1;
+      });
+      setNoteCountsByPlant(counts);
+    });
+
+    return unsubscribe;
+  }, [user]);
 
   const displayPlants = spaceId ? getPlantsBySpace(spaceId) : plants;
 
@@ -155,6 +177,7 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
             <PlantCard
               key={plant.id}
               plant={plant}
+              noteCount={noteCountsByPlant[plant.id] || 0}
               onEdit={setEditingPlant}
               onMove={setMovingPlant}
               onHarvest={setHarvestingPlant}

@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Calendar } from '../ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { cn } from '../../lib/utils';
 
 import type { Task, TaskPriority, GrowSpace, Plant } from '../../lib/types';
@@ -30,6 +29,26 @@ const taskSchema = z.object({
   recurrenceType: z.enum(['daily', 'weekly', 'monthly']).optional(),
   recurrenceInterval: z.number().min(1).max(365).optional(),
   recurrenceEndDate: z.date().optional(),
+}).superRefine((data, ctx) => {
+  if (!data.hasRecurrence) {
+    return;
+  }
+
+  if (!data.recurrenceType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Recurrence type is required',
+      path: ['recurrenceType'],
+    });
+  }
+
+  if (!data.recurrenceInterval) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Recurrence interval is required',
+      path: ['recurrenceInterval'],
+    });
+  }
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -91,6 +110,19 @@ export function TaskForm({
     if (!user) return;
 
     try {
+      let recurrence: Task['recurrence'] = undefined;
+      if (data.hasRecurrence) {
+        if (!data.recurrenceType || !data.recurrenceInterval) {
+          return;
+        }
+
+        recurrence = {
+          type: data.recurrenceType,
+          interval: data.recurrenceInterval,
+          endDate: data.recurrenceEndDate,
+        };
+      }
+
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
         title: data.title,
@@ -100,11 +132,7 @@ export function TaskForm({
         status: task?.status || 'pending',
         spaceId: data.spaceId || undefined,
         plantId: data.plantId || undefined,
-        recurrence: data.hasRecurrence ? {
-          type: data.recurrenceType!,
-          interval: data.recurrenceInterval!,
-          endDate: data.recurrenceEndDate,
-        } : undefined,
+        recurrence,
         completedAt: task?.completedAt,
       };
 
@@ -115,11 +143,7 @@ export function TaskForm({
   };
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle>{task ? 'Edit Task' : 'Create New Task'}</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full max-w-2xl">
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
@@ -348,7 +372,6 @@ export function TaskForm({
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

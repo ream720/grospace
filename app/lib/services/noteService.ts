@@ -90,13 +90,28 @@ export class NoteService {
     try {
       const docRef = doc(firestore, this.collectionName, id);
       
-      const updateData: any = {
-        ...updates,
+      const updateData: Record<string, unknown> = {
         updatedAt: Timestamp.now(),
       };
 
-      if (updates.timestamp) {
-        updateData.timestamp = Timestamp.fromDate(updates.timestamp);
+      if (updates.content !== undefined) {
+        updateData.content = updates.content;
+      }
+
+      if (updates.category !== undefined) {
+        updateData.category = updates.category;
+      }
+
+      if (updates.plantId !== undefined) {
+        updateData.plantId = updates.plantId ?? null;
+      }
+
+      if (updates.spaceId !== undefined) {
+        updateData.spaceId = updates.spaceId ?? null;
+      }
+
+      if (updates.timestamp !== undefined) {
+        updateData.timestamp = updates.timestamp ? Timestamp.fromDate(updates.timestamp) : null;
       }
 
       await updateDoc(docRef, updateData);
@@ -121,7 +136,7 @@ export class NoteService {
         // Delete photos from storage
         for (const photoUrl of note.photos) {
           try {
-            const photoRef = ref(storage, photoUrl);
+            const photoRef = this.getPhotoRef(photoUrl);
             await deleteObject(photoRef);
           } catch (photoError) {
             console.warn('Error deleting photo:', photoError);
@@ -264,6 +279,22 @@ export class NoteService {
       console.error('Error setting up notes subscription:', error);
       return () => {};
     }
+  }
+
+  private getPhotoRef(photoUrl: string) {
+    try {
+      const parsedUrl = new URL(photoUrl);
+      const objectPathMatch = parsedUrl.pathname.match(/\/o\/(.+)$/);
+
+      if (objectPathMatch && objectPathMatch[1]) {
+        const decodedPath = decodeURIComponent(objectPathMatch[1]);
+        return ref(storage, decodedPath);
+      }
+    } catch {
+      // Not a full URL; fall back to ref path/gs:// handling.
+    }
+
+    return ref(storage, photoUrl);
   }
 
   private async uploadPhoto(file: File, userId: string): Promise<string> {

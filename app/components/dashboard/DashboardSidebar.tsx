@@ -112,7 +112,7 @@ export function DashboardSidebar({ className, onNavigate }: DashboardSidebarProp
 
             {/* User Profile Footer */}
             <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
+                <Link to="/profile" onClick={onNavigate} className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
                     <Avatar className="h-8 w-8">
                         <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
@@ -124,7 +124,7 @@ export function DashboardSidebar({ className, onNavigate }: DashboardSidebarProp
                             View Profile
                         </p>
                     </div>
-                </div>
+                </Link>
                 <Button
                     variant="ghost"
                     className="mt-2 w-full justify-start text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10"

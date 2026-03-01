@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Building2, Sprout, Plus, CheckCircle2, TrendingUp, AlertTriangle, Calendar, ShoppingBasket, MoreHorizontal, Droplets, Camera, Bug } from 'lucide-react';
+import { Building2, Sprout, Plus, CheckCircle2, TrendingUp, AlertTriangle, Calendar, StickyNote, ShoppingBasket, StickyNote as NoteIcon } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import type { Route } from "./+types/dashboard";
 import { Button } from '~/components/ui/button';
@@ -11,10 +11,22 @@ import { usePlantStore } from '~/stores/plantStore';
 import { useTaskStore } from '~/stores/taskStore';
 import { useNoteStore } from '~/stores/noteStore';
 import { DashboardLayout } from '~/components/dashboard/DashboardLayout';
+import { PlantStageDistribution } from '~/components/dashboard/PlantStageDistribution';
 import { activityService } from '~/lib/services/activityService';
-import { generateMockData, type MockDataResult } from '~/lib/services/mockDataService';
 import { cn } from '~/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+
+// Forms for Quick Action modals
+import { PlantForm } from '~/components/plants/PlantForm';
+import { SpaceForm } from '~/components/spaces/SpaceForm';
+import { TaskForm } from '~/components/tasks/TaskForm';
+import { NoteForm } from '~/components/notes/NoteForm';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '~/components/ui/dialog';
 
 export function meta({ }: Route.MetaArgs) {
     return [
@@ -25,71 +37,86 @@ export function meta({ }: Route.MetaArgs) {
 
 function DashboardContent() {
     const { user } = useAuthStore();
-    const { spaces, loadSpaces, loading: spacesLoading } = useSpaceStore();
+    const { spaces, loadSpaces, createSpace, loading: spacesLoading } = useSpaceStore();
     const { plants, loadPlants, loading: plantsLoading } = usePlantStore();
-    const { tasks, loadTasks, getUpcomingTasks, getOverdueTasks, loading: tasksLoading } = useTaskStore();
-    const { notes, loadNotes, loading: notesLoading } = useNoteStore();
+    const { tasks, loadTasks, completeTask, loading: tasksLoading } = useTaskStore();
+    const { notes, loadNotes, createNote, loading: notesLoading } = useNoteStore();
 
-    // DEV ONLY: Mock data state (remove before production)
-    const [mockData, setMockData] = useState<MockDataResult | null>(null);
-    const [useMockData, setUseMockData] = useState(false);
+    // Quick Action modal states
+    const [showAddPlant, setShowAddPlant] = useState(false);
+    const [showAddSpace, setShowAddSpace] = useState(false);
+    const [showAddTask, setShowAddTask] = useState(false);
+    const [showAddNote, setShowAddNote] = useState(false);
 
     useEffect(() => {
         if (user) {
             loadSpaces();
             loadPlants();
             loadTasks();
-            loadNotes(user.uid, { limit: 5 }); // Load recent 5 notes
+            loadNotes(user.uid, { limit: 5 });
         }
     }, [user, loadSpaces, loadPlants, loadTasks, loadNotes]);
 
-    // Determine which data to use (real or mock)
-    const displaySpaces = useMockData && mockData ? mockData.spaces : spaces;
-    const displayPlants = useMockData && mockData ? mockData.plants : plants;
-    const displayTasks = useMockData && mockData ? mockData.tasks : tasks;
-    const displayNotes = useMockData && mockData ? mockData.notes : notes;
-
-    const totalPlants = displayPlants.length;
-    const activePlants = displayPlants.filter(p => p.status !== 'harvested' && p.status !== 'removed').length;
-    const harvestedPlants = displayPlants.filter(p => p.status === 'harvested').length;
+    const totalPlants = plants.length;
+    const activePlants = plants.filter(p => p.status !== 'harvested' && p.status !== 'removed').length;
+    const harvestedPlants = plants.filter(p => p.status === 'harvested').length;
 
     // "Open Issues" / High Priority Tasks
-    const highPriorityTasks = displayTasks.filter(t => t.priority === 'high' && t.status === 'pending');
-    const overdueTasks = displayTasks.filter(t => t.status === 'pending' && isAfter(new Date(), t.dueDate));
-    const openIssuesCount = highPriorityTasks.length + overdueTasks.length;
+    const highPriorityTasks = tasks.filter(t => t.priority === 'high' && t.status === 'pending');
+    const overdueTasks = tasks.filter(t => t.status === 'pending' && isAfter(new Date(), t.dueDate));
+    const openIssuesCount = new Set([
+        ...highPriorityTasks.map((task) => task.id),
+        ...overdueTasks.map((task) => task.id),
+    ]).size;
 
     // Tasks Due (Next 24 Hours)
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tasksDueSoon = displayTasks.filter(t =>
-        t.status === 'pending' &&
-        new Date(t.dueDate) <= tomorrow &&
-        new Date(t.dueDate) >= new Date(today.setHours(0,0,0,0))
-    );
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfWindow = new Date(startOfToday);
+    endOfWindow.setDate(endOfWindow.getDate() + 1);
+    const tasksDueSoon = tasks.filter((task) => {
+        if (task.status !== 'pending') {
+            return false;
+        }
+
+        const dueDate = new Date(task.dueDate);
+        return dueDate >= startOfToday && dueDate <= endOfWindow;
+    });
 
     // Recent Activity with Description
     const activities = useMemo(() => {
         const rawActivities = activityService.generateActivities(
-            displayNotes,
-            displayTasks,
-            displayPlants,
-            displaySpaces,
+            notes,
+            tasks,
+            plants,
+            spaces,
             { limit: 5 }
         );
         return rawActivities.map(activity => ({
             ...activity,
             description: activityService.formatActivityDescription(activity)
         }));
-    }, [displayNotes, displayTasks, displayPlants, displaySpaces]);
+    }, [notes, tasks, plants, spaces]);
 
     // Recent Tasks for the list
-    const recentTasks = displayTasks
+    const recentTasks = tasks
         .filter(t => t.status === 'pending')
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
         .slice(0, 5);
 
     const isLoading = spacesLoading || plantsLoading || tasksLoading || notesLoading;
+
+    // Helper for generating activity icon based on type
+    const getActivityIcon = (type: string) => {
+        switch (type) {
+            case 'note_created': return StickyNote;
+            case 'task_completed': return CheckCircle2;
+            case 'plant_added': return Sprout;
+            case 'plant_harvested': return ShoppingBasket;
+            case 'space_created': return Building2;
+            default: return Sprout;
+        }
+    };
 
     // Helper for generating activity colors
     const getActivityColor = (type: string) => {
@@ -102,14 +129,60 @@ function DashboardContent() {
         }
     };
 
-    // Plant Stage Distribution
-    // Map PlantStatus to a simplified "Stage" concept if needed, or just use status groups
-    const seedlings = displayPlants.filter(p => p.status === 'seedling').length;
-    const vegetative = displayPlants.filter(p => p.status === 'vegetative').length;
-    const flowering = displayPlants.filter(p => p.status === 'flowering').length;
+    // Handle marking a task as complete from dashboard
+    const handleMarkComplete = async (taskId: string) => {
+        try {
+            await completeTask(taskId);
+        } catch (error) {
+            console.error('Failed to complete task:', error);
+        }
+    };
 
-    // Calculate percentages
-    const getPercent = (count: number) => totalPlants > 0 ? Math.round((count / totalPlants) * 100) : 0;
+    // Quick Action handlers
+    const handleCreateSpace = async (data: { name: string; type: any; description?: string }) => {
+        if (!user) return;
+        try {
+            await createSpace({ ...data, userId: user.uid });
+            setShowAddSpace(false);
+        } catch (error) {
+            console.error('Failed to create space:', error);
+        }
+    };
+
+    const handleCreateNote = async (data: any) => {
+        if (!user) return;
+        try {
+            await createNote(data, user.uid);
+            setShowAddNote(false);
+        } catch (error) {
+            console.error('Failed to create note:', error);
+        }
+    };
+
+    // Loading skeleton
+    if (isLoading && plants.length === 0 && tasks.length === 0) {
+        return (
+            <DashboardLayout title="Dashboard">
+                <div className="flex-1 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm h-32 animate-pulse" />
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8 space-y-8">
+                            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm h-64 animate-pulse" />
+                            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm h-64 animate-pulse" />
+                        </div>
+                        <div className="lg:col-span-4 space-y-8">
+                            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm h-48 animate-pulse" />
+                            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm h-64 animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout title="Dashboard">
@@ -123,7 +196,7 @@ function DashboardContent() {
                             <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{activePlants}</p>
                             <p className="mt-1 text-xs text-green-600 font-medium flex items-center">
                                 <TrendingUp className="h-3 w-3 mr-1" />
-                                +{displayPlants.filter(p => differenceInDays(new Date(), new Date(p.plantedDate)) <= 7).length} this week
+                                +{plants.filter(p => differenceInDays(new Date(), new Date(p.plantedDate)) <= 7).length} this week
                             </p>
                         </div>
                         <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -202,13 +275,21 @@ function DashboardContent() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-primary">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-primary text-xs"
+                                            onClick={() => handleMarkComplete(task.id)}
+                                        >
                                             Mark Complete
                                         </Button>
                                     </div>
                                 )) : (
                                     <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                                        No upcoming tasks.
+                                        <p>No upcoming tasks.</p>
+                                        <Link to="/tasks" className="text-primary hover:text-primary/80 text-sm mt-1 inline-block">
+                                            Create your first task →
+                                        </Link>
                                     </div>
                                 )}
                             </div>
@@ -221,29 +302,31 @@ function DashboardContent() {
                             </div>
                             <div className="p-6">
                                 <ol className="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-8">
-                                    {activities.map((activity, index) => (
-                                        <li key={activity.id} className="ml-6">
-                                            <span className={cn(
-                                                "absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-8 ring-white dark:ring-slate-800",
-                                                getActivityColor(activity.type)
-                                            )}>
-                                                {/* Start icon logic based on activity type or just generic */}
-                                                <div className="rounded-full p-1.5">
-                                                     <Sprout className="h-4 w-4" />
-                                                </div>
-                                            </span>
-                                            <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-slate-900/50 dark:border-gray-700">
-                                                <div className="items-center justify-between mb-2 sm:flex">
-                                                    <time className="mb-1 text-xs font-normal text-gray-400 sm:order-last sm:mb-0">
-                                                        {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
-                                                    </time>
-                                                    <div className="text-sm font-normal text-gray-500 dark:text-gray-300">
-                                                        {activity.description}
+                                    {activities.map((activity) => {
+                                        const ActivityIcon = getActivityIcon(activity.type);
+                                        return (
+                                            <li key={activity.id} className="ml-6">
+                                                <span className={cn(
+                                                    "absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-8 ring-white dark:ring-slate-800",
+                                                    getActivityColor(activity.type)
+                                                )}>
+                                                    <div className="rounded-full p-1.5">
+                                                         <ActivityIcon className="h-4 w-4" />
+                                                    </div>
+                                                </span>
+                                                <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-slate-900/50 dark:border-gray-700">
+                                                    <div className="items-center justify-between mb-2 sm:flex">
+                                                        <time className="mb-1 text-xs font-normal text-gray-400 sm:order-last sm:mb-0">
+                                                            {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
+                                                        </time>
+                                                        <div className="text-sm font-normal text-gray-500 dark:text-gray-300">
+                                                            {activity.description}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </li>
-                                    ))}
+                                            </li>
+                                        );
+                                    })}
                                     {activities.length === 0 && (
                                         <li className="ml-6 text-gray-500">No recent activity.</li>
                                     )}
@@ -260,103 +343,122 @@ function DashboardContent() {
                         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
                             <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Quick Actions</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <Link to="/plants" className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group">
+                                <button
+                                    onClick={() => setShowAddPlant(true)}
+                                    className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group"
+                                >
                                     <div className="h-10 w-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
                                         <Plus className="h-5 w-5 text-primary" />
                                     </div>
                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Add Plant</span>
-                                </Link>
-                                <Link to="/spaces" className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group">
+                                </button>
+                                <button
+                                    onClick={() => setShowAddSpace(true)}
+                                    className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group"
+                                >
                                     <div className="h-10 w-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
                                         <Building2 className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Manage Spaces</span>
-                                </Link>
-                                <Button variant="ghost" className="h-auto flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Add Space</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowAddNote(true)}
+                                    className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group"
+                                >
                                     <div className="h-10 w-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
-                                        <ShoppingBasket className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                                        <StickyNote className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Log Harvest</span>
-                                </Button>
-                                <Link to="/tasks" className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Add Note</span>
+                                </button>
+                                <button
+                                    onClick={() => setShowAddTask(true)}
+                                    className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all group"
+                                >
                                     <div className="h-10 w-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
                                         <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Create Task</span>
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Garden Snapshot */}
-                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 flex-1">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Garden Snapshot</h3>
-                                <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-200">
-                                    <MoreHorizontal className="h-5 w-5" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Add Task</span>
                                 </button>
                             </div>
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg">
-                                        <Sprout className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Seedling</span>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">{seedlings} ({getPercent(seedlings)}%)</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div className="bg-green-500 h-2 rounded-full" style={{ width: `${getPercent(seedlings)}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg">
-                                        <Sprout className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Vegetative</span>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">{vegetative} ({getPercent(vegetative)}%)</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${getPercent(vegetative)}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg">
-                                        <Sprout className="h-6 w-6 text-green-600 dark:text-green-400" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Flowering</span>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">{flowering} ({getPercent(flowering)}%)</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div className="bg-emerald-700 h-2 rounded-full" style={{ width: `${getPercent(flowering)}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
-                                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Environmental Averages</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="text-center p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
-                                        <span className="block text-xs text-gray-500 dark:text-gray-400">Temp</span>
-                                        <span className="block text-lg font-bold text-gray-900 dark:text-white">74°F</span>
-                                    </div>
-                                    <div className="text-center p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
-                                        <span className="block text-xs text-gray-500 dark:text-gray-400">Humidity</span>
-                                        <span className="block text-lg font-bold text-gray-900 dark:text-white">58%</span>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
+
+                        {/* Plant Stage Distribution */}
+                        <PlantStageDistribution plants={plants} isLoading={plantsLoading} />
                     </div>
                 </div>
             </div>
+
+            {/* Quick Action Modals */}
+
+            {/* Add Plant Modal */}
+            <Dialog open={showAddPlant} onOpenChange={setShowAddPlant}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Plant</DialogTitle>
+                        <DialogDescription>Add a new plant to your garden.</DialogDescription>
+                    </DialogHeader>
+                    <PlantForm
+                        spaces={spaces}
+                        onSuccess={() => { setShowAddPlant(false); loadPlants(); }}
+                        onCancel={() => setShowAddPlant(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Space Modal */}
+            <Dialog open={showAddSpace} onOpenChange={setShowAddSpace}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Create New Space</DialogTitle>
+                        <DialogDescription>Add a new grow space to organize your plants.</DialogDescription>
+                    </DialogHeader>
+                    <SpaceForm
+                        onSubmit={handleCreateSpace}
+                        onCancel={() => setShowAddSpace(false)}
+                        isLoading={spacesLoading}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Task Modal */}
+            <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Create New Task</DialogTitle>
+                    </DialogHeader>
+                    <TaskForm
+                        spaces={spaces}
+                        plants={plants}
+                        onSubmit={async (taskData) => {
+                            try {
+                                await useTaskStore.getState().createTask(taskData);
+                                setShowAddTask(false);
+                                loadTasks();
+                            } catch (error) {
+                                console.error('Failed to create task:', error);
+                            }
+                        }}
+                        onCancel={() => setShowAddTask(false)}
+                        isLoading={false}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Note Modal */}
+            <Dialog open={showAddNote} onOpenChange={setShowAddNote}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add Note</DialogTitle>
+                        <DialogDescription>Record an observation or note about your garden.</DialogDescription>
+                    </DialogHeader>
+                    <NoteForm
+                        onSubmit={async (data) => {
+                            await handleCreateNote(data);
+                        }}
+                        onCancel={() => setShowAddNote(false)}
+                    />
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     );
 }

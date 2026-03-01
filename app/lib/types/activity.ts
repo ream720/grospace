@@ -20,6 +20,8 @@ export interface NoteCreatedActivity extends BaseActivity {
     noteId: string;
     content: string;
     category: string;
+    plantId?: string;
+    spaceId?: string;
     plantName?: string;
     spaceName?: string;
   };
@@ -30,6 +32,8 @@ export interface TaskCompletedActivity extends BaseActivity {
   data: {
     taskId: string;
     title: string;
+    plantId?: string;
+    spaceId?: string;
     plantName?: string;
     spaceName?: string;
   };
@@ -41,6 +45,7 @@ export interface PlantAddedActivity extends BaseActivity {
     plantId: string;
     plantName: string;
     variety: string;
+    spaceId?: string;
     spaceName?: string;
   };
 }

@@ -55,7 +55,7 @@ describe('Plant Store', () => {
   it('should load plants successfully', async () => {
     vi.mocked(plantService.getUserPlants).mockResolvedValue({
       data: [mockPlant],
-      error: null,
+      error: undefined,
     });
 
     const { loadPlants } = usePlantStore.getState();
@@ -69,8 +69,8 @@ describe('Plant Store', () => {
 
   it('should handle load plants error', async () => {
     vi.mocked(plantService.getUserPlants).mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to load plants' },
+      data: undefined,
+      error: { code: 'UNKNOWN_ERROR', message: 'Failed to load plants' },
     });
 
     const { loadPlants } = usePlantStore.getState();
@@ -86,7 +86,7 @@ describe('Plant Store', () => {
     const newPlant = { ...mockPlant, id: 'plant-2', name: 'New Plant' };
     vi.mocked(plantService.createPlant).mockResolvedValue({
       data: newPlant,
-      error: null,
+      error: undefined,
     });
 
     const { createPlant } = usePlantStore.getState();
@@ -111,7 +111,7 @@ describe('Plant Store', () => {
     const updatedPlant = { ...mockPlant, name: 'Updated Plant' };
     vi.mocked(plantService.updatePlant).mockResolvedValue({
       data: updatedPlant,
-      error: null,
+      error: undefined,
     });
 
     const { updatePlant } = usePlantStore.getState();
@@ -126,8 +126,8 @@ describe('Plant Store', () => {
     usePlantStore.setState({ plants: [mockPlant] });
 
     vi.mocked(plantService.deletePlant).mockResolvedValue({
-      data: null,
-      error: null,
+      data: undefined,
+      error: undefined,
     });
 
     const { deletePlant } = usePlantStore.getState();
@@ -144,7 +144,7 @@ describe('Plant Store', () => {
     const movedPlant = { ...mockPlant, spaceId: 'space-2' };
     vi.mocked(plantService.movePlant).mockResolvedValue({
       data: movedPlant,
-      error: null,
+      error: undefined,
     });
 
     const { movePlant } = usePlantStore.getState();
@@ -166,7 +166,7 @@ describe('Plant Store', () => {
     };
     vi.mocked(plantService.harvestPlant).mockResolvedValue({
       data: harvestedPlant,
-      error: null,
+      error: undefined,
     });
 
     const { harvestPlant } = usePlantStore.getState();

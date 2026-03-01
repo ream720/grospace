@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { useAuthStore } from '~/stores/authStore';
 import { Skeleton } from '~/components/ui/skeleton';
 import { Alert, AlertDescription } from '~/components/ui/alert';
@@ -16,6 +16,7 @@ interface ProtectedRouteProps {
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading: authLoading, error: authError } = useAuthStore();
+  const navigate = useNavigate();
 
   // Show loading skeleton while checking auth state
   if (authLoading) {
@@ -40,7 +41,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.href = '/login'}
+              onClick={() => navigate('/login')}
               className="ml-2"
             >
               Go to Login

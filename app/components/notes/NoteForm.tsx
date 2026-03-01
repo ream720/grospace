@@ -37,14 +37,29 @@ interface NoteFormProps {
   onCancel: () => void;
   initialPlantId?: string;
   initialSpaceId?: string;
+  initialContent?: string;
+  initialCategory?: NoteCategory;
+  initialTimestamp?: Date;
+  showPhotoUpload?: boolean;
+  submitLabel?: string;
   loading?: boolean;
 }
+
+const formatDateTimeLocal = (date: Date): string => {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
 
 export function NoteForm({ 
   onSubmit, 
   onCancel, 
   initialPlantId, 
   initialSpaceId,
+  initialContent = '',
+  initialCategory = 'observation',
+  initialTimestamp,
+  showPhotoUpload = true,
+  submitLabel = 'Save Note',
   loading = false 
 }: NoteFormProps) {
   const [photos, setPhotos] = useState<File[]>([]);
@@ -54,17 +69,18 @@ export function NoteForm({
   const form = useForm<NoteFormData>({
     resolver: zodResolver(noteFormSchema),
     defaultValues: {
-      content: '',
-      category: 'observation',
+      content: initialContent,
+      category: initialCategory,
       plantId: initialPlantId || 'none',
       spaceId: initialSpaceId || 'none',
-      timestamp: new Date().toISOString().slice(0, 16), // Format for datetime-local input
+      timestamp: formatDateTimeLocal(initialTimestamp ?? new Date()),
     },
   });
 
   // Reset form values when initial props change and handle plant-space relationship
   React.useEffect(() => {
     let effectiveSpaceId = initialSpaceId || 'none';
+    const timestampValue = formatDateTimeLocal(initialTimestamp ?? new Date());
     
     // If we have an initialPlantId, try to get its space
     if (initialPlantId && initialPlantId !== 'none' && plants.length > 0) {
@@ -81,11 +97,11 @@ export function NoteForm({
     }
 
     form.reset({
-      content: '',
-      category: 'observation',
+      content: initialContent,
+      category: initialCategory,
       plantId: initialPlantId || 'none',
       spaceId: effectiveSpaceId,
-      timestamp: new Date().toISOString().slice(0, 16),
+      timestamp: timestampValue,
     });
 
     // Ensure Select component displays the correct value by setting it again after render
@@ -95,7 +111,16 @@ export function NoteForm({
         form.setValue('spaceId', effectiveSpaceId);
       }
     }, 100);
-  }, [initialPlantId, initialSpaceId, plants, spaces, form]);
+  }, [
+    initialPlantId,
+    initialSpaceId,
+    initialContent,
+    initialCategory,
+    initialTimestamp,
+    plants,
+    spaces,
+    form,
+  ]);
 
   const selectedPlantId = form.watch('plantId');
   const selectedSpaceId = form.watch('spaceId');
@@ -264,14 +289,16 @@ export function NoteForm({
         />
 
         {/* Photo Upload */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Photos</label>
-          <PhotoUpload
-            photos={photos}
-            onPhotosChange={setPhotos}
-            disabled={loading}
-          />
-        </div>
+        {showPhotoUpload && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Photos</label>
+            <PhotoUpload
+              photos={photos}
+              onPhotosChange={setPhotos}
+              disabled={loading}
+            />
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end space-x-2">
@@ -284,7 +311,7 @@ export function NoteForm({
             Cancel
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Note'}
+            {loading ? 'Saving...' : submitLabel}
           </Button>
         </div>
       </form>

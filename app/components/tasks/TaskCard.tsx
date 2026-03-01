@@ -87,20 +87,20 @@ export function TaskCard({
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800';
       case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
     }
   };
 
   const getStatusColor = () => {
-    if (isCompleted) return 'border-green-200 bg-green-50';
-    if (isOverdue) return 'border-red-200 bg-red-50';
-    return 'border-gray-200';
+    if (isCompleted) return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20';
+    if (isOverdue) return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20';
+    return 'border-gray-200 dark:border-gray-700';
   };
 
   return (
@@ -227,7 +227,7 @@ export function TaskCard({
 
           {/* Overdue Warning */}
           {isOverdue && !isCompleted && (
-            <div className="flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
+            <div className="flex items-center space-x-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-md">
               <Clock className="h-4 w-4" />
               <span className="font-medium">Overdue</span>
             </div>

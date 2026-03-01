@@ -27,6 +27,9 @@ vi.mock('../../lib/firebase/config', () => ({
 interface TestDocument extends FirestoreDocument {
   name: string;
   value: number;
+  plantedDate?: Date;
+  metadata?: { lastWatered?: Date };
+  history?: Array<{ recordedAt: Date }>;
 }
 
 class TestService extends BaseService<TestDocument> {
@@ -138,6 +141,35 @@ describe('BaseService', () => {
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-01'),
       });
+    });
+
+    it('should convert nested timestamp-like fields', async () => {
+      mockGetDoc.mockResolvedValue({
+        exists: () => true,
+        id: 'test-id',
+        data: () => ({
+          name: 'Test Document',
+          value: 42,
+          createdAt: { toDate: () => new Date('2024-01-01') },
+          updatedAt: { toDate: () => new Date('2024-01-01') },
+          plantedDate: { toDate: () => new Date('2024-01-03') },
+          metadata: {
+            lastWatered: { toDate: () => new Date('2024-01-04') },
+          },
+          history: [
+            {
+              recordedAt: { toDate: () => new Date('2024-01-05') },
+            },
+          ],
+        }),
+      });
+
+      const result = await service.getById('test-id');
+
+      expect(result.error).toBeUndefined();
+      expect(result.data?.plantedDate).toEqual(new Date('2024-01-03'));
+      expect(result.data?.metadata?.lastWatered).toEqual(new Date('2024-01-04'));
+      expect(result.data?.history?.[0]?.recordedAt).toEqual(new Date('2024-01-05'));
     });
 
     it('should return NOT_FOUND when document does not exist', async () => {

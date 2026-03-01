@@ -30,11 +30,10 @@ import {
 } from '../ui/popover';
 import type { Plant } from '../../lib/types';
 import { usePlantStore } from '../../stores/plantStore';
+import { toDate } from '../../lib/utils/dateUtils';
 
 const harvestFormSchema = z.object({
-  harvestDate: z.date({
-    required_error: 'Harvest date is required',
-  }),
+  harvestDate: z.date(),
 });
 
 type HarvestFormData = z.infer<typeof harvestFormSchema>;
@@ -48,6 +47,7 @@ interface HarvestDialogProps {
 export function HarvestDialog({ plant, onSuccess, onCancel }: HarvestDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { harvestPlant } = usePlantStore();
+  const plantedDate = toDate(plant.plantedDate);
 
   const form = useForm<HarvestFormData>({
     resolver: zodResolver(harvestFormSchema),
@@ -111,7 +111,7 @@ export function HarvestDialog({ plant, onSuccess, onCancel }: HarvestDialogProps
                         selected={field.value}
                         onSelect={field.onChange}
                         disabled={(date) =>
-                          date > new Date() || date < plant.plantedDate
+                          date > new Date() || (plantedDate ? date < plantedDate : false)
                         }
                         initialFocus
                       />

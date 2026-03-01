@@ -195,7 +195,7 @@ export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Grow Space</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a space" />
@@ -229,7 +229,7 @@ export function PlantForm({ plant, spaces, defaultSpaceId, onSuccess, onCancel }
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />

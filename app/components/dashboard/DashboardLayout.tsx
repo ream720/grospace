@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { DashboardSidebar } from './DashboardSidebar';
 import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet';
 import { Button } from '~/components/ui/button';
-import { Menu, Bell, Search, ArrowLeft } from 'lucide-react';
+import { Menu, ArrowLeft } from 'lucide-react';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -61,12 +61,7 @@ export function DashboardLayout({ children, title = 'Dashboard' }: DashboardLayo
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                            <Bell className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                            <Search className="h-5 w-5" />
-                        </Button>
+                        {/* Notification and search features planned for post-MVP */}
                     </div>
                 </header>
 
