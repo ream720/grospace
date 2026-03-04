@@ -219,12 +219,14 @@ TypeScript test-source issues have been resolved:
 - `app/test/stores/plantStore.test.ts`
 
 Validation status:
-- ✅ `npx tsc --noEmit` passes
-- ⚠️ `npm run test`, `npm run typecheck`, and `npm run build` are currently blocked in this environment due DNS resolution failure for `localhost` (`EAI_FAIL`)
-- ⚠️ `npm run lint` currently fails because ESLint v9 expects an `eslint.config.*` flat config file in this repo setup
+- PASS: `npm run test` passes (`211` tests)
+- PASS: `npm run typecheck` passes
+- PASS: `npm run build` passes
+- OPEN: `npm run lint` fails because ESLint v9 expects an `eslint.config.*` flat config file in this repo setup
+- PARTIAL: `npm run test:e2e` is currently unstable when run against real Firebase (auth quota/rate limits + one flaky plant edit assertion)
 
 ---
 
 **Total Test Coverage: 211 tests passing ✅**
 
-This comprehensive test suite ensures the plant tracking functionality is robust, reliable, and regression-free!
+This comprehensive test suite provides strong regression coverage for plant tracking, with remaining E2E stability work tracked separately.

@@ -1,9 +1,9 @@
 # Grospace E2E Test Suite
 
-> **Status**: 67 tests passing across 7 spec files
+> **Status**: 68 tests across 7 spec files. Latest full run on March 1, 2026: 64 passed, 1 skipped, 3 failed.
 > **Framework**: [Playwright](https://playwright.dev/) with Chromium
 > **Run**: `npm run test:e2e` · `npm run test:e2e:headed` · `npm run test:e2e:ui`
-> **Local Runner Note (March 1, 2026)**: Current shell environment has `localhost` DNS resolution failure (`EAI_FAIL`), which blocks local execution until host resolution is restored.
+> **Local Runner Note (March 1, 2026)**: Tests run against a real Firebase project. Full-suite runs can hit Firebase Auth rate limits/quota (`auth/quota-exceeded`), so use caution with repeated runs.
 
 ---
 
@@ -39,6 +39,8 @@ npx playwright test e2e/auth.spec.ts  # Single file
 
 If you see `getaddrinfo EAI_FAIL localhost`, fix local host resolution first, then rerun the commands above.
 
+If you see `Firebase: Exceeded quota for verifying passwords. (auth/quota-exceeded)`, stop repeated login-based runs and retry later or switch tests to emulator/staging credentials.
+
 ### Test Reports
 After a test run, view the HTML report:
 ```bash
@@ -72,6 +74,12 @@ e2e/
 
 ## Current Coverage
 
+### Current Run Snapshot (March 1, 2026)
+- Full suite result: `64` passed, `3` failed, `1` skipped (`68` total)
+- Stable failure class: Firebase Auth quota/rate-limit during login (`auth/quota-exceeded`)
+- Intermittent failure class: plant detail edit assertion in `e2e/plants.spec.ts`
+
+
 ### ✅ Auth (`e2e/auth.spec.ts` — 9 tests)
 | Test | What It Validates |
 |------|-------------------|
@@ -85,7 +93,7 @@ e2e/
 | Register → Login link | "Sign in" link navigates to `/login` |
 | Login → Register link | "Sign up" link navigates to `/register` |
 
-### ✅ Navigation (`e2e/navigation.spec.ts` — 13 tests)
+### Navigation (`e2e/navigation.spec.ts` - 17 tests)
 | Test | What It Validates |
 |------|-------------------|
 | Home page (public) | `/` accessible without auth |
@@ -100,7 +108,7 @@ e2e/
 | Navigate to Settings | Sidebar link → `/settings` with correct title |
 | Log Out button visible | Confirms button is present when authenticated |
 
-### ✅ Dashboard (`e2e/dashboard.spec.ts` — 8 tests)
+### Dashboard (`e2e/dashboard.spec.ts` - 7 tests)
 | Test | What It Validates |
 |------|-------------------|
 | Page loads | URL is `/dashboard`, title matches |
@@ -120,7 +128,7 @@ e2e/
 | Full create + cleanup | Fills name, selects type, submits, verifies it appears, cleans up |
 | Space card navigation | Clicking a card navigates to `/spaces/:id` |
 
-### ✅ Plants (`e2e/plants.spec.ts` — 7 tests)
+### Plants (`e2e/plants.spec.ts` - 13 tests)
 | Test | What It Validates |
 |------|-------------------|
 | Page loads with heading | Title, "My Plants" heading, subtitle visible |
@@ -131,7 +139,7 @@ e2e/
 | Card → detail page | Clicking a plant link navigates to `/plants/:id` |
 | Delete plant | Create a plant, delete via card menu, verify removal |
 
-### ✅ Tasks (`e2e/tasks.spec.ts` — 6 tests)
+### Tasks (`e2e/tasks.spec.ts` - 10 tests)
 | Test | What It Validates |
 |------|-------------------|
 | Page loads with heading | Title, "Tasks" heading, subtitle, "Add Task" button visible |
@@ -141,7 +149,7 @@ e2e/
 | Complete a task | Create task, complete via checkbox, confirm in completion dialog |
 | Delete task | Create task, delete via card menu, verify removal |
 
-### ✅ Notes (`e2e/notes.spec.ts` — 5 tests)
+### Notes (`e2e/notes.spec.ts` - 7 tests)
 | Test | What It Validates |
 |------|-------------------|
 | Page loads with heading | Title, "Notes & Observations" heading, "Add Note" button visible |
@@ -277,4 +285,4 @@ e2e/
 
 ---
 
-*Last updated: March 1, 2026*
+*Last updated: March 1, 2026 (post-runtime validation update)*

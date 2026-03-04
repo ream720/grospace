@@ -2,7 +2,7 @@
 
 Project: Grospace
 Date: March 1, 2026
-Audit Type: Static code audit (no runtime test execution in this session)
+Audit Type: Static code audit (initial pass; runtime validation added in follow-up)
 Inputs reviewed: `E2E_TESTING.md`, `TEST_SUMMARY.md`, services, stores, routes, UI components, Firestore/Storage rules.
 
 ## Executive Summary
@@ -116,12 +116,11 @@ Recommended fix: Replace with router navigation APIs.
 
 ## Launch Gate Recommendation
 
-Do not launch until these are addressed and re-tested:
-1. A-01 Date normalization
-2. A-03 Notes memo dependency bug
-3. A-04 Photo delete path handling
-4. A-05 Note edit payload mismatch
-5. A-06 N+1 note count reads
+Current recommendation (March 1, 2026): MVP launch candidate for an initial deployment, with explicit caveats:
+1. Keep E2E execution limited until Firebase Auth quota/rate-limit issues are solved or tests are moved to an emulator/staging Firebase project.
+2. Add ESLint v9 flat config (`eslint.config.*`) or pin ESLint v8 before making lint a required deploy gate.
+
+All previously launch-blocking audit items (A-01 through A-12) are implemented and tracked as `DONE` in the remediation log below.
 
 ## Verification Checklist After Fixes
 
@@ -134,8 +133,8 @@ Do not launch until these are addressed and re-tested:
 
 ## Audit Constraints
 
-- Runtime tests were not executed in this session due command execution policy restrictions.
-- Findings are based on static code inspection.
+- The original audit findings were produced via static code inspection.
+- Follow-up runtime validation was executed on March 1, 2026 and is captured in the validation log below.
 
 ## Remediation Progress
 
@@ -163,17 +162,20 @@ Last updated: March 1, 2026
   - `app/test/components/notes/NoteCard.test.tsx`
   - `app/test/services/taskService.test.ts`
   - `app/test/stores/plantStore.test.ts`
-- 2026-03-01: `npx tsc --noEmit` -> PASS.
-- 2026-03-01: `npm run test` / `npm run typecheck` / `npm run build` in current shell -> BLOCKED by environment DNS error resolving `localhost` (`EAI_FAIL`).
+- 2026-03-01: `npm run typecheck` -> PASS.
+- 2026-03-01: `npm run build` -> PASS.
+- 2026-03-01: `npm run lint` -> FAIL (ESLint v9 requires `eslint.config.*`; repo currently uses `.eslintrc.js`).
+- 2026-03-01: `npm run test:e2e` -> PARTIAL:
+  - Run A: `66` passed, `1` failed, `1` skipped.
+  - Run B: `64` passed, `3` failed, `1` skipped.
+  - Failures were dominated by Firebase Auth quota (`auth/quota-exceeded`) plus one flaky plant-edit assertion in `e2e/plants.spec.ts`.
 
 ### Pre-MVP Shakedown (Round 1)
 
-Status: PARTIAL (environment-limited)
+Status: PARTIAL (launch-candidate with known test-environment caveats)
 
-- ✅ TypeScript compile gate (`tsc --noEmit`) is clean.
-- ✅ All audit findings A-01 through A-12 are implemented and tracked as `DONE`.
-- ⚠️ Runtime validation commands are currently blocked by environment DNS issue (`localhost` resolution):
-  - `npm run test`
-  - `npm run typecheck` (fails in `react-router typegen`)
-  - `npm run build`
-- ⚠️ `npm run lint` currently fails due missing ESLint v9 flat config (`eslint.config.*`) in this repo setup.
+- PASS: TypeScript and build gates are clean (`npm run typecheck`, `npm run build`).
+- PASS: Unit/component/integration suite is clean (`npm run test`: `211`/`211`).
+- PASS: All audit findings A-01 through A-12 are implemented and tracked as `DONE`.
+- PARTIAL: E2E suite is largely green but unstable on real Firebase due auth quota/rate limits and one flaky plant-edit assertion.
+- OPEN: `npm run lint` is not yet a valid gate until an ESLint v9 flat config is added.
