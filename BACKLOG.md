@@ -1,5 +1,60 @@
 # Grospace Project Backlog
 
+## MVP Launch Priority Backlog (Added March 3, 2026)
+- [ ] **Friendly Firebase Auth Errors (Login Flows)**: Replace raw Firebase errors with user-friendly messaging for login failures (invalid credentials, quota, network, etc.).
+- [ ] **Add Plant Icon Update**: Replace the generic plus icon on "Add Plant" with a plant-specific icon for clearer affordance.
+- [ ] **Intro Modal / Onboarding**: Add a first-run modal with basic usage guidance for new users.
+- [ ] **Spaces: Consolidated Add Action**: Implement a single "Add" button in Spaces that supports creating both Plants and Notes.
+- [ ] **Task Attachment UX Research/Design**: Define a logical UX for attaching Tasks directly from both Plants and Spaces contexts.
+- [ ] **Dashboard Tile Click Behavior**: Make tiles (Active Plants, Open Issues, Tasks Due, Total Harvests) clickable and define the expected behavior for "Total Harvests".
+
+## MVP Launch Checklist (Consolidated March 4, 2026)
+Source docs: `MVP_TEST_GATE.md`, `E2E_TESTING.md`, `TEST_SUMMARY.md`
+
+### Release Gates (Pre-Invite / Pre-Launch)
+- [ ] **Lint Gate Readiness**: Add ESLint v9 flat config (`eslint.config.*`) or pin ESLint v8 so lint can become a required deploy gate.
+- [ ] **E2E Auth Stability**: Move login-heavy Playwright runs to Firebase Emulator or staging credentials to avoid `auth/quota-exceeded`.
+- [ ] **Flaky Test Fix**: Stabilize the intermittent plant-edit assertion in `e2e/plants.spec.ts`.
+- [ ] **Shakedown Runbook**: Before each invite wave, run and log results for `npm run typecheck`, `npm run build`, `npm run test`, and targeted `npm run test:e2e`.
+
+### High-Priority MVP Test Coverage Gaps
+- [ ] **Overdue Tasks UI Validation**: Verify overdue task behavior (manual path currently skipped because of date-picker flakiness).
+- [ ] **Note Photo Upload E2E**: Add/validate end-to-end coverage for note photo upload flow.
+- [ ] **Profile + Settings E2E**: Cover profile rendering, settings load, display-name update, theme toggle, and settings logout.
+- [ ] **Dashboard Quick Actions E2E**: Validate Add Plant/Space/Note/Task quick actions plus dashboard task completion.
+- [ ] **Auth Edge Cases E2E**: Cover duplicate email, mismatched passwords, short passwords, reset password, session persistence, and remember-me behavior.
+- [ ] **Error/Resilience Checks**: Validate offline behavior, friendly Firebase errors, and empty states for no spaces/plants/tasks/notes.
+- [ ] **Responsive Smoke Coverage**: Validate mobile nav, dashboard card stacking, and form usability on small viewports.
+
+## Monetization Backlog (Consolidated March 4, 2026)
+Source docs: `MONETIZATION_STRATEGY_AUDIT.md`, `MONETIZATION_IMPLEMENTATION_PLAN.md`
+
+### P0 Monetization Foundation (Stripe Test Mode First)
+- [ ] **Finalize Free/Pro Packaging**: Confirm limits, pricing (`$9/mo`, `$79/yr`), and trial/intro offer decision.
+- [ ] **Stripe Product Setup (Test)**: Create Pro monthly/yearly products/prices and store price IDs in environment config.
+- [ ] **Checkout Session Endpoint**: Implement secure `createCheckoutSession`.
+- [ ] **Billing Portal Endpoint**: Implement secure `createBillingPortalSession`.
+- [ ] **Webhook Processing**: Implement `stripeWebhook` with signature verification and idempotent processing.
+- [ ] **Subscription Sync**: Sync Stripe state to `users/{uid}` fields (`plan`, `planStatus`, `billingCycle`, `currentPeriodEnd`, `trialEndsAt`).
+- [ ] **Entitlements Schema**: Add `entitlements/{uid}` for resource caps and paid feature flags.
+- [ ] **Usage Schema + Reset Logic**: Add `usage/{uid}` counters with monthly reset (`lastResetMonth`).
+- [ ] **Limit Guards in Create Flows**: Enforce quota checks in spaces/plants/notes/photo upload flows with clear upgrade prompts.
+- [ ] **Settings Plan Card + Usage Meter**: Replace beta-only account status with plan details and an upgrade CTA.
+- [ ] **Billing Route + Navigation**: Add `/billing` and wire upgrade/manage billing flows.
+- [ ] **Required Policy Pages**: Publish `/terms`, `/privacy`, `/subscription-terms`, `/refund-policy`, and link them site-wide.
+
+### P1 Monetization Hardening
+- [ ] **Hard Enforcement in Rules**: Add Firestore/Storage and backend checks to block over-limit writes.
+- [ ] **Near-Limit UX**: Add 80/90/100% usage warning states and polished paywall messaging.
+- [ ] **Billing Lifecycle UX**: Surface `trialing`, `past_due`, `canceled`, and `incomplete` account states.
+
+### P2 Monetization Optimization
+- [ ] **Billing Funnel Analytics**: Track upgrade/paywall/checkout/portal/cancel/payment-failed events.
+- [ ] **Controlled Rollout Plan**: Enable billing for a subset of users first and monitor conversion/churn.
+- [ ] **Stripe Live Readiness**: Complete live-mode checklist after EIN/business verification is finished.
+- [ ] **Secondary Revenue Layer (Later)**: Evaluate contextual affiliate recommendations after subscription conversion stabilizes.
+
+
 ## 🐞 Potential Bugs
 - [x] **Missing Firestore Indexes**: Updated `firestore.indexes.json` with all necessary composite indexes for tasks, notes, plants, and spaces. (Pending User Deployment)
 - [x] **Toast Implementation**: `TasksPage.tsx` uses a simple `console.log` for toasts instead of a real toast library.
