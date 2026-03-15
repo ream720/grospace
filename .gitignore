@@ -11,3 +11,6 @@
 /test-results/
 /playwright-report/
 /playwright/.auth/
+
+# Agents and Skills configurations
+.agents/

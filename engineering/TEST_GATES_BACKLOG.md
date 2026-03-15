@@ -9,6 +9,8 @@ Last updated: March 15, 2026
 
 ## Release Gates (Pre-Invite / Pre-Launch)
 
+- [ ] Firebase Auth audit: inventory app + test auth flows, verify provider/rules/session assumptions, and document quota risk points with mitigations.
+- [ ] Auth test utility setup: standardize shared helpers for unit/integration/E2E using Firebase Emulator auth + seeded test users so automated suites avoid live-project auth quota limits.
 - [ ] E2E auth stability: move login-heavy runs to Firebase Emulator or stable staging credentials (`auth/quota-exceeded` mitigation).
 - [ ] Flaky test fix: stabilize intermittent plant-edit assertion in `e2e/plants.spec.ts`.
 - [ ] Shakedown runbook: log `npm run typecheck`, `npm run build`, `npm run test`, and targeted `npm run test:e2e` before invite waves.

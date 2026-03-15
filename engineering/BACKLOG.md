@@ -9,6 +9,7 @@ Use this file as the control-plane backlog. Detailed work lives in focused docs 
 - [ ] Complete Events testing hardening pass (unit + E2E migration + flaky test stabilization). See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
 - [ ] Ship remaining MVP dashboard polish items (`empty states`, `new user CTA`, `quick action modal flicker`). See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
 - [ ] Run pre-invite shakedown with gate command log. See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
+- [ ] Run Firebase Auth audit and implement quota-safe auth testing utilities across unit/integration/E2E. See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
 
 ## Next
 

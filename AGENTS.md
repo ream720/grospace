@@ -59,3 +59,10 @@ Legacy docs moved from root:
 - [`engineering/MVP_TEST_GATE.md`](./engineering/MVP_TEST_GATE.md)
 - [`engineering/E2E_TESTING.md`](./engineering/E2E_TESTING.md)
 - [`engineering/TEST_SUMMARY.md`](./engineering/TEST_SUMMARY.md)
+
+## Project Skills
+
+- Installed project-scoped skills live in [`./.agents/skills/`](./.agents/skills/).
+- Skill inventory and usage guidance live in [`SKILLS.md`](./SKILLS.md).
+- Installed-skill lock state is tracked in [`skills-lock.json`](./skills-lock.json).
+- After adding or updating skills, restart Codex/session to refresh skill discovery metadata.
