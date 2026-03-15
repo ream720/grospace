@@ -5,6 +5,17 @@ import { plantService } from '../lib/services/plantService';
 import { noteService } from '../lib/services/noteService';
 import { useAuthStore } from './authStore';
 
+export interface HarvestPlantOptions {
+  createLinkedNote?: boolean;
+  noteContent?: string;
+  noteTimestamp?: Date;
+}
+
+export interface HarvestPlantResult {
+  noteCreated: boolean;
+  noteError?: string;
+}
+
 interface PlantState {
   plants: Plant[];
   selectedPlant: Plant | null;
@@ -17,7 +28,11 @@ interface PlantState {
   updatePlant: (id: string, updates: Partial<Plant>) => Promise<void>;
   deletePlant: (id: string) => Promise<void>;
   movePlant: (id: string, newSpaceId: string) => Promise<void>;
-  harvestPlant: (id: string, harvestDate: Date) => Promise<void>;
+  harvestPlant: (
+    id: string,
+    harvestDate: Date,
+    options?: HarvestPlantOptions
+  ) => Promise<HarvestPlantResult>;
   selectPlant: (plant: Plant | null) => void;
   getPlantsBySpace: (spaceId: string) => Plant[];
   setError: (error: string | null) => void;
@@ -190,22 +205,64 @@ export const usePlantStore = create<PlantState>()(
       }
     },
 
-    harvestPlant: async (id, harvestDate) => {
+    harvestPlant: async (id, harvestDate, options = {}) => {
       set({ loading: true, error: null });
       try {
         const result = await plantService.harvestPlant(id, harvestDate);
         if (result.error) {
           set({ error: result.error.message, loading: false });
           throw new Error(result.error.message);
-        } else {
-          const updatedPlant = result.data!;
-          set(state => ({
-            plants: state.plants.map(plant => 
-              plant.id === id ? updatedPlant : plant
-            ),
-            selectedPlant: state.selectedPlant?.id === id ? updatedPlant : state.selectedPlant,
-            loading: false
-          }));
+        }
+
+        const updatedPlant = result.data!;
+        set(state => ({
+          plants: state.plants.map(plant => 
+            plant.id === id ? updatedPlant : plant
+          ),
+          selectedPlant: state.selectedPlant?.id === id ? updatedPlant : state.selectedPlant,
+        }));
+
+        if (!options.createLinkedNote) {
+          set({ loading: false });
+          return { noteCreated: false };
+        }
+
+        const trimmedContent = options.noteContent?.trim();
+        const noteContent =
+          trimmedContent && trimmedContent.length > 0
+            ? trimmedContent
+            : `Harvest recorded for ${updatedPlant.name}.`;
+
+        try {
+          await noteService.create(
+            {
+              content: noteContent,
+              category: 'milestone',
+              plantId: updatedPlant.id,
+              spaceId: updatedPlant.spaceId,
+              timestamp: options.noteTimestamp ?? harvestDate,
+            },
+            updatedPlant.userId
+          );
+
+          set({ loading: false });
+          return { noteCreated: true };
+        } catch (noteError) {
+          const noteErrorMessage =
+            noteError instanceof Error
+              ? noteError.message
+              : 'Failed to create linked harvest note';
+
+          console.warn('Harvest recorded but linked note creation failed:', {
+            plantId: updatedPlant.id,
+            error: noteError,
+          });
+
+          set({ loading: false });
+          return {
+            noteCreated: false,
+            noteError: noteErrorMessage,
+          };
         }
       } catch (error) {
         console.error('Failed to harvest plant:', error);

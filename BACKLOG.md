@@ -6,7 +6,7 @@
 
 1. [x] Events UX quick wins (remove inert Events controls and clarify task-tab criteria copy).
 2. [x] Lint gate readiness (added ESLint v9 flat config + `eslint-plugin-react`; `npm run lint` passes on 2026-03-14).
-3. [ ] Harvest note flow when recording harvests.
+3. [x] Harvest note flow when recording harvests (completed March 15, 2026: Record Harvest now supports optional linked Events milestone note capture).
 
 - [x] **Friendly Firebase Auth Errors (Login Flows)**: Replaced raw Firebase auth errors with user-friendly messaging for login failures (invalid credentials, quota, network, etc.).
 - [x] **Add Plant Icon Update**: Replaced generic plus icons on "Add Plant" actions with a plant-specific icon for clearer affordance.
@@ -24,15 +24,22 @@
 - [x] **Events Functional Parity Audit + Scope Tightening (March 14, 2026)**: Confirmed Notes/Tasks -> Events refactor is nearly complete. Remaining MVP scope is final Events UI/UX polish review plus planned unit/E2E `/events` refactors.
 - [ ] **Unit Test Refactor for Events (Post-IA Consolidation)**: Update unit/integration test suites that assert Notes/Tasks routes, nav labels, and page-level behavior to the new `/events` model.
 - [ ] **E2E Test Refactor for Events (Post-IA Consolidation)**: Update Playwright coverage (`e2e/notes.spec.ts`, `e2e/tasks.spec.ts`, `e2e/navigation.spec.ts`, and related dashboard deep-link checks) for `/events` tabs and legacy redirect behavior.
-- [ ] Record Harvest feature should allow a harvest note (to record success/failure/learnings/lessons etc.)
+- [x] Record Harvest feature should allow a harvest note (to record success/failure/learnings/lessons etc.) (completed March 15, 2026: linked Events milestone note is optional and defaults ON).
 - [ ] Consider which 4 features are the most useful to show at the top of the Dashboard (currently Active Plants, Open Issues, Tasks Due, and Harvests)
 - [ ] Add visual timeline feature on Events page (and think about where else it might make sense... on Plant / Space page potentially?)
-- [ ] **Events UI/UX Final Polish Review (Near-Complete)**: Run a focused sweep for any remaining rough edges now that no-op controls are removed; capture only concrete polish defects.
+- [ ] **Dashboard Recent Activity Empty State Styling**: Replace plain "No recent activity." text with a designed zero-state UI (visual treatment + helpful guidance/next action).
+- [ ] **Dashboard New User Start CTA**: Add a clear "Set Up Garden" start point on Dashboard for brand-new accounts with no spaces/plants.
+- [ ] **Optional New User Guided Walkthrough**: Add an opt-in first-run walkthrough that guides users through creating an initial Space or Plant.
+- [ ] **Dashboard Quick Actions Modal Flicker (Create Space/Plant)**: Investigate and fix the odd modal flicker after submit/create from Dashboard quick actions.
+- [ ] **Spaces + Plants Visualization UX**: Improve Dashboard UX for visualizing spaces and plants within them, or add a dedicated feature/page for this view.
+- [x] **Events UI/UX Final Polish Review (Near-Complete)**: Completed March 15, 2026 with Notes IA/filter polish in `/events` (context tabs, unlinked scope control, mobile search visibility, standardized clear-filter CTA, and context-aware empty states).
 - [x] **Events Task Filter Criteria Copy (March 14, 2026)**: Added explicit helper copy in Events Tasks view to define `Issues` (pending high-priority or overdue) and `Due Soon` (pending tasks due today/tomorrow window).
 - [x] **Events: Remove inert task-details comment box/timeline (March 14, 2026)**: Removed non-functional UI from task details.
 - [x] **Events: Remove inert sidebar-collapse control (March 14, 2026)**: Removed non-functional control from Events Tasks header.
+- [x] **Tasks: Context-First Filters IA Streamline (March 15, 2026)**: Reworked `/events?type=tasks` to `All / Plants / Spaces` context tabs, compact status chips (`All/Pending/Completed`), popover smart-status filters (`Issues/Due Soon/Overdue`), `All tasks / Unlinked` scope, and mobile-visible task search with active filter chips.
 - [ ] **Post-MVP Lint Hardening**: Re-enable `react/no-unescaped-entities` and clean up JSX text escapes across existing UI copy.
-- [ ] Notes: Rework filters to have Plants/Spaces main tabs (tertiary All? maybe - not sure) to reduce clutter 
+- [x] Notes: Rework filters to have Plants/Spaces main tabs (tertiary All? maybe - not sure) to reduce clutter (completed March 15, 2026: `All / Plants / Spaces` context tabs added with explicit `All notes / Unlinked` scope in All context).
+- [ ] **Notes Backward-Compatibility Cleanup**: Review Notes for backward-compatibility patterns and clean them up, using the cleaner Tasks implementation as a reference.
 
 
 ## MVP Launch Checklist (Consolidated March 4, 2026)

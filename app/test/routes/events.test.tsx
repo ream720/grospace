@@ -505,7 +505,7 @@ describe('Events route', () => {
 
   it('applies task deep-link filters and due-date grouping from url params', async () => {
     mockSearchParams = new URLSearchParams(
-      'type=tasks&taskTab=overdue&taskPriority=high&taskSpaceId=space-1&taskPlantId=plant-1&taskGroupBy=dueDate'
+      'type=tasks&taskStatus=overdue&taskPriority=high&taskSpaceId=space-1&taskPlantId=plant-1&taskGroupBy=dueDate'
     );
     mockTasks = [
       {
@@ -561,9 +561,9 @@ describe('Events route', () => {
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
   });
 
-  it('shows task status tabs and clears task filters params', async () => {
+  it('shows task context/status controls and clears task filter params', async () => {
     mockSearchParams = new URLSearchParams(
-      'type=tasks&taskTab=completed&taskPriority=medium&taskGroupBy=priority'
+      'type=tasks&taskContext=plants&taskStatus=completed&taskPriority=medium&taskGroupBy=dueDate'
     );
     mockTasks = [
       {
@@ -585,23 +585,30 @@ describe('Events route', () => {
     );
     expect(
       screen.getByText(
-        /Issues shows pending high-priority or overdue tasks\. Due Soon shows pending tasks due today or tomorrow\./i
+        /Use Filters for smart status views: Issues shows pending high-priority or overdue tasks, and Due Soon shows pending tasks due today or tomorrow\./i
       )
     ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Pending/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Issues/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Due Soon/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Overdue/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Plants/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Spaces/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All statuses' })).toBeInTheDocument();
     expect(
-      screen.getByRole('tab', { name: /Completed/i })
+      screen.getByRole('button', { name: 'Pending statuses' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Completed statuses' })
     ).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Add a comment...')).not.toBeInTheDocument();
     expect(screen.queryByText('Added task')).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.getByRole('button', { name: 'Issues' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Due Soon' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overdue' })).toBeInTheDocument();
+
     fireEvent.change(screen.getByPlaceholderText('Search tasks...'), {
       target: { value: 'prune' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     await waitFor(() => {
       expect(mockSetSearchParams).toHaveBeenCalled();
@@ -609,11 +616,52 @@ describe('Events route', () => {
 
     const params = mockSetSearchParams.mock.calls.at(-1)?.[0] as URLSearchParams;
     expect(params.get('type')).toBe('tasks');
-    expect(params.get('taskTab')).toBeNull();
+    expect(params.get('taskContext')).toBeNull();
+    expect(params.get('taskScope')).toBeNull();
+    expect(params.get('taskStatus')).toBeNull();
     expect(params.get('taskPriority')).toBeNull();
     expect(params.get('taskSpaceId')).toBeNull();
     expect(params.get('taskPlantId')).toBeNull();
     expect(params.get('taskGroupBy')).toBeNull();
+  });
+
+  it('shows only unlinked tasks when taskScope=unlinked in all context', async () => {
+    mockSearchParams = new URLSearchParams(
+      'type=tasks&taskContext=all&taskScope=unlinked'
+    );
+    mockTasks = [
+      {
+        id: 'task-unlinked',
+        userId: 'user-1',
+        title: 'General admin',
+        dueDate: new Date('2026-03-25T10:00:00'),
+        priority: 'low',
+        status: 'pending',
+        createdAt: new Date('2026-03-01T10:00:00'),
+        updatedAt: new Date('2026-03-01T10:00:00'),
+      },
+      {
+        id: 'task-linked',
+        userId: 'user-1',
+        title: 'Linked plant task',
+        dueDate: new Date('2026-03-25T10:00:00'),
+        priority: 'medium',
+        status: 'pending',
+        plantId: 'plant-1',
+        spaceId: 'space-1',
+        createdAt: new Date('2026-03-01T10:00:00'),
+        updatedAt: new Date('2026-03-01T10:00:00'),
+      },
+    ];
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('General admin').length).toBeGreaterThan(0);
+    });
+
+    expect(screen.queryByText('Linked plant task')).not.toBeInTheDocument();
+    expect(screen.getByText('Unlinked')).toBeInTheDocument();
   });
 
   it('shows notes helper copy and first-note empty state guidance', async () => {
@@ -670,7 +718,7 @@ describe('Events route', () => {
       screen.queryByRole('button', { name: 'Create First Note' })
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     await waitFor(() => {
       expect(mockSetSearchParams).toHaveBeenCalled();

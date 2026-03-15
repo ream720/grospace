@@ -19,6 +19,7 @@ import {
   Plus,
   Repeat,
   Search,
+  SlidersHorizontal,
   StickyNote,
   Trash2,
   X,
@@ -67,6 +68,11 @@ import {
 } from '../components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -88,20 +94,24 @@ import {
 } from '../lib/types/note';
 
 type EventsView = 'notes' | 'tasks';
-type TaskFilterTab =
+type TaskStatusFilter =
   | 'all'
   | 'pending'
   | 'issues'
   | 'dueSoon'
   | 'overdue'
   | 'completed';
-type TaskGroupBy = 'none' | 'space' | 'plant' | 'priority' | 'dueDate';
+type TaskContextFilter = 'all' | 'plants' | 'spaces';
+type TaskScopeFilter = 'all' | 'unlinked';
+type TaskGroupBy = 'none' | 'dueDate';
 type NoteCategoryFilter = NoteCategory | 'all';
+type NoteContextFilter = 'all' | 'plants' | 'spaces';
+type NoteScopeFilter = 'all' | 'unlinked';
 
 const parseEventsView = (value: string | null): EventsView =>
   value === 'notes' ? 'notes' : 'tasks';
 
-const parseTaskFilterTab = (value: string | null): TaskFilterTab => {
+const parseTaskStatusFilter = (value: string | null): TaskStatusFilter => {
   if (
     value === 'pending' ||
     value === 'issues' ||
@@ -115,6 +125,29 @@ const parseTaskFilterTab = (value: string | null): TaskFilterTab => {
   return 'all';
 };
 
+const parseTaskContextFilter = (
+  value: string | null,
+  taskSpaceFilter: string,
+  taskPlantFilter: string
+): TaskContextFilter => {
+  if (value === 'plants' || value === 'spaces' || value === 'all') {
+    return value;
+  }
+
+  if (taskPlantFilter !== 'all' && taskSpaceFilter === 'all') {
+    return 'plants';
+  }
+
+  if (taskSpaceFilter !== 'all' && taskPlantFilter === 'all') {
+    return 'spaces';
+  }
+
+  return 'all';
+};
+
+const parseTaskScopeFilter = (value: string | null): TaskScopeFilter =>
+  value === 'unlinked' ? 'unlinked' : 'all';
+
 const parseTaskPriorityFilter = (
   value: string | null
 ): TaskPriority | 'all' => {
@@ -126,19 +159,14 @@ const parseTaskPriorityFilter = (
 };
 
 const parseTaskGroupBy = (value: string | null): TaskGroupBy => {
-  if (
-    value === 'space' ||
-    value === 'plant' ||
-    value === 'priority' ||
-    value === 'dueDate'
-  ) {
+  if (value === 'dueDate') {
     return value;
   }
 
   return 'none';
 };
 
-const parseTaskContextFilter = (value: string | null) =>
+const parseContextEntityFilter = (value: string | null) =>
   value && value.trim() ? value : 'all';
 
 const parseNoteCategoryFilter = (value: string | null): NoteCategoryFilter => {
@@ -153,6 +181,26 @@ const parseNoteCategoryFilter = (value: string | null): NoteCategoryFilter => {
   return 'all';
 };
 
+const parseNoteContextFilter = (
+  value: string | null,
+  noteSpaceFilter: string,
+  notePlantFilter: string
+): NoteContextFilter => {
+  if (value === 'plants' || value === 'spaces' || value === 'all') {
+    return value;
+  }
+
+  if (notePlantFilter !== 'all' && notePlantFilter !== 'none') {
+    return 'plants';
+  }
+
+  if (noteSpaceFilter !== 'all' && noteSpaceFilter !== 'none') {
+    return 'spaces';
+  }
+
+  return 'all';
+};
+
 const isSmallViewport = () =>
   typeof window !== 'undefined' && window.innerWidth < 1024;
 
@@ -162,7 +210,7 @@ const formatDateTime = (date?: Date) =>
 const notesHelperCopy =
   'Use notes for observations, issues, milestones, photo updates, and other context you may want to find later. Use tasks for work that needs a due date or repeat schedule.';
 const tasksHelperCopy =
-  'Issues shows pending high-priority or overdue tasks. Due Soon shows pending tasks due today or tomorrow.';
+  'Use Filters for smart status views: Issues shows pending high-priority or overdue tasks, and Due Soon shows pending tasks due today or tomorrow.';
 
 const isTaskOverdue = (task: Task) => {
   if (task.status === 'completed') return false;
@@ -655,21 +703,47 @@ function EventsContent() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeView = parseEventsView(searchParams.get('type'));
 
-  const taskTabFilter = parseTaskFilterTab(
-    searchParams.get('taskTab') ?? searchParams.get('tab')
+  const taskSpaceFilter = parseContextEntityFilter(searchParams.get('taskSpaceId'));
+  const taskPlantFilter = parseContextEntityFilter(searchParams.get('taskPlantId'));
+  const taskContextFilter = parseTaskContextFilter(
+    searchParams.get('taskContext'),
+    taskSpaceFilter,
+    taskPlantFilter
   );
+  const taskScopeFilter: TaskScopeFilter =
+    taskContextFilter === 'all'
+      ? parseTaskScopeFilter(searchParams.get('taskScope'))
+      : 'all';
+  const taskStatusFilter = parseTaskStatusFilter(searchParams.get('taskStatus'));
   const taskPriorityFilter = parseTaskPriorityFilter(
-    searchParams.get('taskPriority') ?? searchParams.get('priority')
+    searchParams.get('taskPriority')
   );
-  const taskSpaceFilter = parseTaskContextFilter(searchParams.get('taskSpaceId'));
-  const taskPlantFilter = parseTaskContextFilter(searchParams.get('taskPlantId'));
-  const taskGroupBy = parseTaskGroupBy(
-    searchParams.get('taskGroupBy') ?? searchParams.get('groupBy')
-  );
+  const taskGroupBy = parseTaskGroupBy(searchParams.get('taskGroupBy'));
+
+  const effectiveTaskSpaceFilter =
+    taskContextFilter === 'plants' ? 'all' : taskSpaceFilter;
+  const effectiveTaskPlantFilter =
+    taskContextFilter === 'spaces' ? 'all' : taskPlantFilter;
 
   const noteCategoryFilter = parseNoteCategoryFilter(searchParams.get('category'));
-  const noteSpaceFilter = parseTaskContextFilter(searchParams.get('spaceId'));
-  const notePlantFilter = parseTaskContextFilter(searchParams.get('plantId'));
+  const noteSpaceFilter = parseContextEntityFilter(searchParams.get('spaceId'));
+  const notePlantFilter = parseContextEntityFilter(searchParams.get('plantId'));
+  const noteContextFilter = parseNoteContextFilter(
+    searchParams.get('noteContext'),
+    noteSpaceFilter,
+    notePlantFilter
+  );
+  const noteScopeFilter: NoteScopeFilter =
+    noteContextFilter === 'all' &&
+    noteSpaceFilter === 'none' &&
+    notePlantFilter === 'none'
+      ? 'unlinked'
+      : 'all';
+
+  const effectiveNoteSpaceFilter =
+    noteContextFilter === 'plants' ? 'all' : noteSpaceFilter;
+  const effectiveNotePlantFilter =
+    noteContextFilter === 'spaces' ? 'all' : notePlantFilter;
 
   const { user } = useAuthStore();
   const {
@@ -729,15 +803,15 @@ function EventsContent() {
 
     loadNotes(user.uid, {
       spaceId:
-        noteSpaceFilter !== 'all' && noteSpaceFilter !== 'none'
-          ? noteSpaceFilter
+        effectiveNoteSpaceFilter !== 'all' && effectiveNoteSpaceFilter !== 'none'
+          ? effectiveNoteSpaceFilter
           : undefined,
       plantId:
-        notePlantFilter !== 'all' && notePlantFilter !== 'none'
-          ? notePlantFilter
+        effectiveNotePlantFilter !== 'all' && effectiveNotePlantFilter !== 'none'
+          ? effectiveNotePlantFilter
           : undefined,
     });
-  }, [user, loadNotes, notePlantFilter, noteSpaceFilter]);
+  }, [user, loadNotes, effectiveNotePlantFilter, effectiveNoteSpaceFilter]);
 
   useEffect(() => {
     return () => {
@@ -768,23 +842,117 @@ function EventsContent() {
     updateSearchParams({ type: view });
   };
 
+  const handleTaskContextChange = (nextContext: TaskContextFilter) => {
+    if (nextContext === 'plants') {
+      updateSearchParams({
+        taskContext: 'plants',
+        taskScope: null,
+        taskSpaceId: null,
+        taskPlantId: taskPlantFilter === 'all' ? null : taskPlantFilter,
+      });
+      return;
+    }
+
+    if (nextContext === 'spaces') {
+      updateSearchParams({
+        taskContext: 'spaces',
+        taskScope: null,
+        taskPlantId: null,
+        taskSpaceId: taskSpaceFilter === 'all' ? null : taskSpaceFilter,
+      });
+      return;
+    }
+
+    updateSearchParams({
+      taskContext: 'all',
+      taskScope: null,
+      taskSpaceId: null,
+      taskPlantId: null,
+    });
+  };
+
+  const handleTaskScopeChange = (nextScope: TaskScopeFilter) => {
+    if (nextScope === 'unlinked') {
+      updateSearchParams({
+        taskContext: 'all',
+        taskScope: 'unlinked',
+        taskSpaceId: null,
+        taskPlantId: null,
+      });
+      return;
+    }
+
+    updateSearchParams({
+      taskContext: 'all',
+      taskScope: null,
+      taskSpaceId: null,
+      taskPlantId: null,
+    });
+  };
+
+  const handleNoteContextChange = (nextContext: NoteContextFilter) => {
+    if (nextContext === 'plants') {
+      updateSearchParams({
+        noteContext: 'plants',
+        spaceId: null,
+        plantId: notePlantFilter === 'none' ? null : notePlantFilter,
+      });
+      return;
+    }
+
+    if (nextContext === 'spaces') {
+      updateSearchParams({
+        noteContext: 'spaces',
+        plantId: null,
+        spaceId: noteSpaceFilter === 'none' ? null : noteSpaceFilter,
+      });
+      return;
+    }
+
+    updateSearchParams({
+      noteContext: 'all',
+      spaceId: null,
+      plantId: null,
+    });
+  };
+
+  const handleNoteScopeChange = (nextScope: NoteScopeFilter) => {
+    if (nextScope === 'unlinked') {
+      updateSearchParams({
+        noteContext: 'all',
+        spaceId: 'none',
+        plantId: 'none',
+      });
+      return;
+    }
+
+    updateSearchParams({
+      noteContext: 'all',
+      spaceId: null,
+      plantId: null,
+    });
+  };
+
   const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
 
-    if (taskSearchQuery.trim()) {
-      const query = taskSearchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query)
-      );
+    if (taskContextFilter === 'plants') {
+      filtered = filtered.filter((task) => Boolean(task.plantId));
+    }
+
+    if (taskContextFilter === 'spaces') {
+      filtered = filtered.filter((task) => Boolean(task.spaceId));
+    }
+
+    if (taskContextFilter === 'all' && taskScopeFilter === 'unlinked') {
+      filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
     }
 
     const today = startOfDay(new Date());
     const dueSoonWindowEnd = new Date(today);
     dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
 
-    switch (taskTabFilter) {
+    switch (taskStatusFilter) {
       case 'pending':
         filtered = filtered.filter((task) => task.status === 'pending');
         break;
@@ -819,20 +987,21 @@ function EventsContent() {
       filtered = filtered.filter((task) => task.priority === taskPriorityFilter);
     }
 
-    if (taskSpaceFilter !== 'all') {
-      if (taskSpaceFilter === 'none') {
-        filtered = filtered.filter((task) => !task.spaceId);
-      } else {
-        filtered = filtered.filter((task) => task.spaceId === taskSpaceFilter);
-      }
+    if (effectiveTaskSpaceFilter !== 'all') {
+      filtered = filtered.filter((task) => task.spaceId === effectiveTaskSpaceFilter);
     }
 
-    if (taskPlantFilter !== 'all') {
-      if (taskPlantFilter === 'none') {
-        filtered = filtered.filter((task) => !task.plantId);
-      } else {
-        filtered = filtered.filter((task) => task.plantId === taskPlantFilter);
-      }
+    if (effectiveTaskPlantFilter !== 'all') {
+      filtered = filtered.filter((task) => task.plantId === effectiveTaskPlantFilter);
+    }
+
+    if (taskSearchQuery.trim()) {
+      const query = taskSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (task) =>
+          task.title.toLowerCase().includes(query) ||
+          task.description?.toLowerCase().includes(query)
+      );
     }
 
     filtered.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
@@ -840,38 +1009,82 @@ function EventsContent() {
     return filtered;
   }, [
     tasks,
-    taskSearchQuery,
-    taskTabFilter,
+    taskContextFilter,
+    taskScopeFilter,
+    taskStatusFilter,
     taskPriorityFilter,
-    taskSpaceFilter,
-    taskPlantFilter,
+    effectiveTaskSpaceFilter,
+    effectiveTaskPlantFilter,
+    taskSearchQuery,
   ]);
 
-  const taskCounts = useMemo(() => {
+  const taskContextCounts = useMemo(
+    () => ({
+      all: tasks.length,
+      plants: tasks.filter((task) => Boolean(task.plantId)).length,
+      spaces: tasks.filter((task) => Boolean(task.spaceId)).length,
+    }),
+    [tasks]
+  );
+
+  const taskStatusCounts = useMemo(() => {
+    let filtered = [...tasks];
+
+    if (taskContextFilter === 'plants') {
+      filtered = filtered.filter((task) => Boolean(task.plantId));
+    }
+
+    if (taskContextFilter === 'spaces') {
+      filtered = filtered.filter((task) => Boolean(task.spaceId));
+    }
+
+    if (taskContextFilter === 'all' && taskScopeFilter === 'unlinked') {
+      filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
+    }
+
+    if (taskPriorityFilter !== 'all') {
+      filtered = filtered.filter((task) => task.priority === taskPriorityFilter);
+    }
+
+    if (effectiveTaskSpaceFilter !== 'all') {
+      filtered = filtered.filter((task) => task.spaceId === effectiveTaskSpaceFilter);
+    }
+
+    if (effectiveTaskPlantFilter !== 'all') {
+      filtered = filtered.filter((task) => task.plantId === effectiveTaskPlantFilter);
+    }
+
     const today = startOfDay(new Date());
     const dueSoonWindowEnd = new Date(today);
     dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
 
     return {
-      all: tasks.length,
-      pending: tasks.filter((task) => task.status === 'pending').length,
-      issues: tasks.filter(
+      all: filtered.length,
+      pending: filtered.filter((task) => task.status === 'pending').length,
+      completed: filtered.filter((task) => task.status === 'completed').length,
+      issues: filtered.filter(
         (task) =>
           task.status === 'pending' &&
           (task.priority === 'high' || task.dueDate < today)
       ).length,
-      dueSoon: tasks.filter(
+      dueSoon: filtered.filter(
         (task) =>
           task.status === 'pending' &&
           task.dueDate >= today &&
           task.dueDate <= dueSoonWindowEnd
       ).length,
-      overdue: tasks.filter(
+      overdue: filtered.filter(
         (task) => task.status === 'pending' && task.dueDate < today
       ).length,
-      completed: tasks.filter((task) => task.status === 'completed').length,
     };
-  }, [tasks]);
+  }, [
+    tasks,
+    taskContextFilter,
+    taskScopeFilter,
+    taskPriorityFilter,
+    effectiveTaskSpaceFilter,
+    effectiveTaskPlantFilter,
+  ]);
 
   const groupedTasks = useMemo(() => {
     if (taskGroupBy === 'none') {
@@ -890,38 +1103,7 @@ function EventsContent() {
       let groupTitle = 'Other';
       let order = 999;
 
-      if (taskGroupBy === 'space') {
-        if (!task.spaceId) {
-          groupTitle = 'No Space';
-          order = 1;
-        } else {
-          const space = spaces.find((item) => item.id === task.spaceId);
-          groupTitle = space?.name ?? 'Unknown Space';
-          order = 0;
-        }
-      } else if (taskGroupBy === 'plant') {
-        if (!task.plantId) {
-          groupTitle = 'No Plant';
-          order = 1;
-        } else {
-          const plant = plants.find((item) => item.id === task.plantId);
-          groupTitle = plant
-            ? plant.variety
-              ? `${plant.name} (${plant.variety})`
-              : plant.name
-            : 'Unknown Plant';
-          order = 0;
-        }
-      } else if (taskGroupBy === 'priority') {
-        groupTitle =
-          task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
-        const priorityOrder: Record<TaskPriority, number> = {
-          high: 0,
-          medium: 1,
-          low: 2,
-        };
-        order = priorityOrder[task.priority];
-      } else if (taskGroupBy === 'dueDate') {
+      if (taskGroupBy === 'dueDate') {
         const dueDate = startOfDay(task.dueDate);
         if (dueDate < today) {
           groupTitle = 'Overdue';
@@ -965,10 +1147,22 @@ function EventsContent() {
           (a, b) => a.dueDate.getTime() - b.dueDate.getTime()
         ),
       }));
-  }, [filteredTasks, taskGroupBy, spaces, plants]);
+  }, [filteredTasks, taskGroupBy]);
 
   const filteredNotes = useMemo(() => {
     let filtered = [...notes];
+
+    if (noteContextFilter === 'plants') {
+      filtered = filtered.filter((note) => Boolean(note.plantId));
+    }
+
+    if (noteContextFilter === 'spaces') {
+      filtered = filtered.filter((note) => Boolean(note.spaceId));
+    }
+
+    if (noteContextFilter === 'all' && noteScopeFilter === 'unlinked') {
+      filtered = filtered.filter((note) => !note.plantId && !note.spaceId);
+    }
 
     if (noteSearchQuery.trim()) {
       const query = noteSearchQuery.toLowerCase();
@@ -983,19 +1177,23 @@ function EventsContent() {
       );
     }
 
-    if (noteSpaceFilter !== 'all') {
-      if (noteSpaceFilter === 'none') {
+    if (effectiveNoteSpaceFilter !== 'all') {
+      if (effectiveNoteSpaceFilter === 'none') {
         filtered = filtered.filter((note) => !note.spaceId);
       } else {
-        filtered = filtered.filter((note) => note.spaceId === noteSpaceFilter);
+        filtered = filtered.filter(
+          (note) => note.spaceId === effectiveNoteSpaceFilter
+        );
       }
     }
 
-    if (notePlantFilter !== 'all') {
-      if (notePlantFilter === 'none') {
+    if (effectiveNotePlantFilter !== 'all') {
+      if (effectiveNotePlantFilter === 'none') {
         filtered = filtered.filter((note) => !note.plantId);
       } else {
-        filtered = filtered.filter((note) => note.plantId === notePlantFilter);
+        filtered = filtered.filter(
+          (note) => note.plantId === effectiveNotePlantFilter
+        );
       }
     }
 
@@ -1004,10 +1202,12 @@ function EventsContent() {
     return filtered;
   }, [
     notes,
+    noteContextFilter,
+    noteScopeFilter,
     noteSearchQuery,
     noteCategoryFilter,
-    noteSpaceFilter,
-    notePlantFilter,
+    effectiveNoteSpaceFilter,
+    effectiveNotePlantFilter,
   ]);
   const selectedTask = selectedTaskId
     ? (filteredTasks.find((task) => task.id === selectedTaskId) ?? null)
@@ -1016,35 +1216,58 @@ function EventsContent() {
     ? (filteredNotes.find((note) => note.id === selectedNoteId) ?? null)
     : null;
 
-  const availableTaskPlantsForFilter =
-    taskSpaceFilter !== 'all' && taskSpaceFilter !== 'none'
-      ? plants.filter((plant) => plant.spaceId === taskSpaceFilter)
-      : plants;
+  const availableTaskPlantsForFilter = plants;
 
-  const availableNotePlantsForFilter =
-    noteSpaceFilter === 'all'
-      ? plants
-      : noteSpaceFilter === 'none'
-        ? []
-        : plants.filter((plant) => plant.spaceId === noteSpaceFilter);
+  const availableNotePlantsForFilter = plants;
 
-  const noteCategoryCounts = useMemo(() => {
-    const counts: Record<NoteCategoryFilter, number> = {
+  const noteContextCounts = useMemo(
+    () => ({
       all: notes.length,
-      observation: 0,
-      feeding: 0,
-      pruning: 0,
-      issue: 0,
-      milestone: 0,
-      general: 0,
-    };
+      plants: notes.filter((note) => Boolean(note.plantId)).length,
+      spaces: notes.filter((note) => Boolean(note.spaceId)).length,
+    }),
+    [notes]
+  );
 
-    notes.forEach((note) => {
-      counts[note.category] += 1;
-    });
+  const noteEmptyStateTitle = useMemo(() => {
+    if (notes.length === 0) {
+      return 'No notes found';
+    }
 
-    return counts;
-  }, [notes]);
+    if (noteContextFilter === 'plants') {
+      return 'No plant notes';
+    }
+
+    if (noteContextFilter === 'spaces') {
+      return 'No space notes';
+    }
+
+    if (noteScopeFilter === 'unlinked') {
+      return 'No unlinked notes';
+    }
+
+    return 'No notes found';
+  }, [notes.length, noteContextFilter, noteScopeFilter]);
+
+  const noteEmptyStateDescription = useMemo(() => {
+    if (notes.length === 0) {
+      return 'Start documenting observations, issues, milestones, or photo progress here. Use tasks separately for work that needs scheduling.';
+    }
+
+    if (noteContextFilter === 'plants') {
+      return "Try selecting a different plant or adjusting your search and category filters.";
+    }
+
+    if (noteContextFilter === 'spaces') {
+      return "Try selecting a different space or adjusting your search and category filters.";
+    }
+
+    if (noteScopeFilter === 'unlinked') {
+      return 'No unlinked notes match your current search or category filters.';
+    }
+
+    return "Try adjusting your search or filters to find what you're looking for.";
+  }, [notes.length, noteContextFilter, noteScopeFilter]);
 
   useEffect(() => {
     if (
@@ -1301,115 +1524,709 @@ function EventsContent() {
     }
   };
 
-  const renderNotesFilters = () => (
-    <>
-      <div className="mb-4 overflow-x-auto pb-2 scrollbar-hide">
-        <Tabs
-          value={noteCategoryFilter}
-          onValueChange={(value) => updateSearchParams({ category: value })}
-          className="min-w-max"
-        >
-          <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
-            <TabsTrigger value="all">
-              All
-              {noteCategoryCounts.all > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                >
-                  {noteCategoryCounts.all}
-                </Badge>
-              )}
-            </TabsTrigger>
-            {NOTE_CATEGORIES.map((category) => (
-              <TabsTrigger key={category.value} value={category.value}>
-                {category.label}
-                {noteCategoryCounts[category.value] > 0 && (
+  const renderTasksFilters = () => {
+    const hasActiveTaskFilters =
+      Boolean(taskSearchQuery.trim()) ||
+      taskContextFilter !== 'all' ||
+      taskScopeFilter !== 'all' ||
+      taskStatusFilter !== 'all' ||
+      taskPriorityFilter !== 'all' ||
+      effectiveTaskSpaceFilter !== 'all' ||
+      effectiveTaskPlantFilter !== 'all' ||
+      taskGroupBy !== 'none';
+
+    const taskStatusLabelMap: Record<Exclude<TaskStatusFilter, 'all'>, string> =
+      {
+        pending: 'Pending',
+        completed: 'Completed',
+        issues: 'Issues',
+        dueSoon: 'Due Soon',
+        overdue: 'Overdue',
+      };
+
+    const activeFilterChips: Array<{
+      key: string;
+      label: string;
+      onRemove: () => void;
+    }> = [];
+
+    if (taskContextFilter === 'plants') {
+      activeFilterChips.push({
+        key: 'context-plants',
+        label: 'Plants',
+        onRemove: () => handleTaskContextChange('all'),
+      });
+    }
+
+    if (taskContextFilter === 'spaces') {
+      activeFilterChips.push({
+        key: 'context-spaces',
+        label: 'Spaces',
+        onRemove: () => handleTaskContextChange('all'),
+      });
+    }
+
+    if (taskScopeFilter === 'unlinked') {
+      activeFilterChips.push({
+        key: 'scope-unlinked',
+        label: 'Unlinked',
+        onRemove: () => handleTaskScopeChange('all'),
+      });
+    }
+
+    if (taskStatusFilter !== 'all') {
+      activeFilterChips.push({
+        key: 'status',
+        label: taskStatusLabelMap[taskStatusFilter],
+        onRemove: () => updateSearchParams({ taskStatus: null }),
+      });
+    }
+
+    if (taskPriorityFilter !== 'all') {
+      activeFilterChips.push({
+        key: 'priority',
+        label: `${taskPriorityFilter.charAt(0).toUpperCase()}${taskPriorityFilter.slice(1)} Priority`,
+        onRemove: () => updateSearchParams({ taskPriority: null }),
+      });
+    }
+
+    if (taskContextFilter === 'plants' && effectiveTaskPlantFilter !== 'all') {
+      const plantLabel =
+        plants.find((plant) => plant.id === effectiveTaskPlantFilter)?.name ??
+        'Plant';
+
+      activeFilterChips.push({
+        key: 'plant',
+        label: plantLabel,
+        onRemove: () => updateSearchParams({ taskPlantId: null }),
+      });
+    }
+
+    if (taskContextFilter === 'spaces' && effectiveTaskSpaceFilter !== 'all') {
+      const spaceLabel =
+        spaces.find((space) => space.id === effectiveTaskSpaceFilter)?.name ??
+        'Space';
+
+      activeFilterChips.push({
+        key: 'space',
+        label: spaceLabel,
+        onRemove: () => updateSearchParams({ taskSpaceId: null }),
+      });
+    }
+
+    if (taskGroupBy !== 'none') {
+      activeFilterChips.push({
+        key: 'group-by',
+        label: 'Group: Due Date',
+        onRemove: () => updateSearchParams({ taskGroupBy: null }),
+      });
+    }
+
+    return (
+      <>
+        <div className="mb-4 overflow-x-auto pb-2 scrollbar-hide">
+          <Tabs
+            value={taskContextFilter}
+            onValueChange={(value) =>
+              handleTaskContextChange(value as TaskContextFilter)
+            }
+            className="min-w-max"
+          >
+            <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
+              <TabsTrigger value="all">
+                All
+                {taskContextCounts.all > 0 && (
                   <Badge
                     variant="secondary"
                     className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
                   >
-                    {noteCategoryCounts[category.value]}
+                    {taskContextCounts.all}
                   </Badge>
                 )}
               </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <Select
-          value={noteSpaceFilter}
-          onValueChange={(value) =>
-            updateSearchParams({ spaceId: value, plantId: null })
-          }
-        >
-          <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-            <SelectValue placeholder="Space" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Spaces</SelectItem>
-            <SelectItem value="none">No Space</SelectItem>
-            {spaces.map((space) => (
-              <SelectItem key={space.id} value={space.id}>
-                {space.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={notePlantFilter}
-          onValueChange={(value) => updateSearchParams({ plantId: value })}
-        >
-          <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-            <SelectValue placeholder="Plant" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Plants</SelectItem>
-            <SelectItem value="none">No Plant</SelectItem>
-            {availableNotePlantsForFilter.map((plant) => (
-              <SelectItem key={plant.id} value={plant.id}>
-                {plant.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="relative ml-auto hidden max-w-[220px] flex-1 sm:block">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-          <Input
-            type="text"
-            placeholder="Search notes..."
-            value={noteSearchQuery}
-            onChange={(event) => setNoteSearchQuery(event.target.value)}
-            className="h-9 rounded-md border-transparent bg-[#1e293b] pl-9 text-slate-200 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-slate-700"
-          />
+              <TabsTrigger value="plants">
+                Plants
+                {taskContextCounts.plants > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {taskContextCounts.plants}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="spaces">
+                Spaces
+                {taskContextCounts.spaces > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {taskContextCounts.spaces}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {(noteSearchQuery ||
-          noteCategoryFilter !== 'all' ||
-          noteSpaceFilter !== 'all' ||
-          notePlantFilter !== 'all') && (
-          <Button
-            variant="ghost"
-            className="text-slate-400 hover:bg-slate-800 hover:text-white"
-            onClick={() => {
-              setNoteSearchQuery('');
-              updateSearchParams({
-                category: null,
-                spaceId: null,
-                plantId: null,
-              });
-            }}
-          >
-            Clear
-          </Button>
+        <div className="mb-3 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex min-w-max items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={taskStatusFilter === 'all' ? 'secondary' : 'ghost'}
+              className="h-9"
+              aria-label="All statuses"
+              onClick={() => updateSearchParams({ taskStatus: null })}
+            >
+              All
+              {taskStatusCounts.all > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                >
+                  {taskStatusCounts.all}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={taskStatusFilter === 'pending' ? 'secondary' : 'ghost'}
+              className="h-9"
+              aria-label="Pending statuses"
+              onClick={() => updateSearchParams({ taskStatus: 'pending' })}
+            >
+              Pending
+              {taskStatusCounts.pending > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                >
+                  {taskStatusCounts.pending}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={taskStatusFilter === 'completed' ? 'secondary' : 'ghost'}
+              className="h-9"
+              aria-label="Completed statuses"
+              onClick={() => updateSearchParams({ taskStatus: 'completed' })}
+            >
+              Completed
+              {taskStatusCounts.completed > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                >
+                  {taskStatusCounts.completed}
+                </Badge>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              type="text"
+              placeholder="Search tasks..."
+              value={taskSearchQuery}
+              onChange={(event) => setTaskSearchQuery(event.target.value)}
+              className="h-9 rounded-md border-transparent bg-[#1e293b] pl-9 text-slate-200 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-slate-700"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-72 space-y-4 border-slate-700 bg-[#111d32] text-slate-200"
+            >
+              {taskContextFilter === 'all' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Scope
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={taskScopeFilter === 'all' ? 'secondary' : 'ghost'}
+                      className="justify-start"
+                      onClick={() => handleTaskScopeChange('all')}
+                    >
+                      All tasks
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        taskScopeFilter === 'unlinked' ? 'secondary' : 'ghost'
+                      }
+                      className="justify-start"
+                      onClick={() => handleTaskScopeChange('unlinked')}
+                    >
+                      Unlinked
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Smart status
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={taskStatusFilter === 'issues' ? 'secondary' : 'ghost'}
+                    className="justify-center"
+                    onClick={() => updateSearchParams({ taskStatus: 'issues' })}
+                  >
+                    Issues
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      taskStatusFilter === 'dueSoon' ? 'secondary' : 'ghost'
+                    }
+                    className="justify-center"
+                    onClick={() => updateSearchParams({ taskStatus: 'dueSoon' })}
+                  >
+                    Due Soon
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={taskStatusFilter === 'overdue' ? 'secondary' : 'ghost'}
+                    className="justify-center"
+                    onClick={() => updateSearchParams({ taskStatus: 'overdue' })}
+                  >
+                    Overdue
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Priority
+                </p>
+                <Select
+                  value={taskPriorityFilter}
+                  onValueChange={(value: TaskPriority | 'all') =>
+                    updateSearchParams({ taskPriority: value })
+                  }
+                >
+                  <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                    <SelectValue placeholder="All priorities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {taskContextFilter === 'plants' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Plant
+                  </p>
+                  <Select
+                    value={effectiveTaskPlantFilter}
+                    onValueChange={(value) => updateSearchParams({ taskPlantId: value })}
+                  >
+                    <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                      <SelectValue placeholder="All plants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Plants</SelectItem>
+                      {availableTaskPlantsForFilter.map((plant) => (
+                        <SelectItem key={plant.id} value={plant.id}>
+                          {plant.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {taskContextFilter === 'spaces' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Space
+                  </p>
+                  <Select
+                    value={effectiveTaskSpaceFilter}
+                    onValueChange={(value) => updateSearchParams({ taskSpaceId: value })}
+                  >
+                    <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                      <SelectValue placeholder="All spaces" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Spaces</SelectItem>
+                      {spaces.map((space) => (
+                        <SelectItem key={space.id} value={space.id}>
+                          {space.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Group by
+                </p>
+                <Select
+                  value={taskGroupBy}
+                  onValueChange={(value: TaskGroupBy) =>
+                    updateSearchParams({ taskGroupBy: value })
+                  }
+                >
+                  <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                    <SelectValue placeholder="No grouping" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Grouping</SelectItem>
+                    <SelectItem value="dueDate">Due Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {hasActiveTaskFilters && (
+            <Button
+              variant="ghost"
+              className="h-9 text-slate-400 hover:bg-slate-800 hover:text-white"
+              onClick={() => {
+                setTaskSearchQuery('');
+                updateSearchParams({
+                  taskContext: null,
+                  taskScope: null,
+                  taskStatus: null,
+                  taskPriority: null,
+                  taskSpaceId: null,
+                  taskPlantId: null,
+                  taskGroupBy: null,
+                  tab: null,
+                  taskTab: null,
+                  priority: null,
+                  groupBy: null,
+                });
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+
+        {activeFilterChips.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onRemove}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1 text-xs text-slate-200 hover:bg-slate-700"
+              >
+                <span>{chip.label}</span>
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
         )}
-      </div>
-    </>
-  );
+      </>
+    );
+  };
+
+  const renderNotesFilters = () => {
+    const hasActiveNoteFilters =
+      Boolean(noteSearchQuery.trim()) ||
+      noteCategoryFilter !== 'all' ||
+      noteContextFilter !== 'all' ||
+      noteScopeFilter !== 'all' ||
+      effectiveNoteSpaceFilter !== 'all' ||
+      effectiveNotePlantFilter !== 'all';
+
+    const activeFilterChips: Array<{
+      key: string;
+      label: string;
+      onRemove: () => void;
+    }> = [];
+
+    if (noteScopeFilter === 'unlinked') {
+      activeFilterChips.push({
+        key: 'scope-unlinked',
+        label: 'Unlinked',
+        onRemove: () => handleNoteScopeChange('all'),
+      });
+    }
+
+    if (noteCategoryFilter !== 'all') {
+      activeFilterChips.push({
+        key: 'category',
+        label: getNoteCategoryLabel(noteCategoryFilter),
+        onRemove: () => updateSearchParams({ category: null }),
+      });
+    }
+
+    if (noteContextFilter === 'plants' && effectiveNotePlantFilter !== 'all') {
+      const plantLabel =
+        plants.find((plant) => plant.id === effectiveNotePlantFilter)?.name ??
+        'Plant';
+
+      activeFilterChips.push({
+        key: 'plant',
+        label: plantLabel,
+        onRemove: () => updateSearchParams({ plantId: null }),
+      });
+    }
+
+    if (noteContextFilter === 'spaces' && effectiveNoteSpaceFilter !== 'all') {
+      const spaceLabel =
+        spaces.find((space) => space.id === effectiveNoteSpaceFilter)?.name ??
+        'Space';
+
+      activeFilterChips.push({
+        key: 'space',
+        label: spaceLabel,
+        onRemove: () => updateSearchParams({ spaceId: null }),
+      });
+    }
+
+    return (
+      <>
+        <div className="mb-4 overflow-x-auto pb-2 scrollbar-hide">
+          <Tabs
+            value={noteContextFilter}
+            onValueChange={(value) =>
+              handleNoteContextChange(value as NoteContextFilter)
+            }
+            className="min-w-max"
+          >
+            <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
+              <TabsTrigger value="all">
+                All
+                {noteContextCounts.all > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {noteContextCounts.all}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="plants">
+                Plants
+                {noteContextCounts.plants > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {noteContextCounts.plants}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="spaces">
+                Spaces
+                {noteContextCounts.spaces > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {noteContextCounts.spaces}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              type="text"
+              placeholder="Search notes..."
+              value={noteSearchQuery}
+              onChange={(event) => setNoteSearchQuery(event.target.value)}
+              className="h-9 rounded-md border-transparent bg-[#1e293b] pl-9 text-slate-200 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-slate-700"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-72 space-y-4 border-slate-700 bg-[#111d32] text-slate-200"
+            >
+              {noteContextFilter === 'all' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Scope
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={noteScopeFilter === 'all' ? 'secondary' : 'ghost'}
+                      className="justify-start"
+                      onClick={() => handleNoteScopeChange('all')}
+                    >
+                      All notes
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={noteScopeFilter === 'unlinked' ? 'secondary' : 'ghost'}
+                      className="justify-start"
+                      onClick={() => handleNoteScopeChange('unlinked')}
+                    >
+                      Unlinked
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Category
+                </p>
+                <Select
+                  value={noteCategoryFilter}
+                  onValueChange={(value) => updateSearchParams({ category: value })}
+                >
+                  <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {NOTE_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {noteContextFilter === 'plants' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Plant
+                  </p>
+                  <Select
+                    value={effectiveNotePlantFilter}
+                    onValueChange={(value) => updateSearchParams({ plantId: value })}
+                  >
+                    <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                      <SelectValue placeholder="All plants" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Plants</SelectItem>
+                      {availableNotePlantsForFilter.map((plant) => (
+                        <SelectItem key={plant.id} value={plant.id}>
+                          {plant.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {noteContextFilter === 'spaces' && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Space
+                  </p>
+                  <Select
+                    value={effectiveNoteSpaceFilter}
+                    onValueChange={(value) => updateSearchParams({ spaceId: value })}
+                  >
+                    <SelectTrigger className="h-9 border-slate-700 bg-[#0f172a] text-slate-200">
+                      <SelectValue placeholder="All spaces" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Spaces</SelectItem>
+                      {spaces.map((space) => (
+                        <SelectItem key={space.id} value={space.id}>
+                          {space.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          {hasActiveNoteFilters && (
+            <Button
+              variant="ghost"
+              className="h-9 text-slate-400 hover:bg-slate-800 hover:text-white"
+              onClick={() => {
+                setNoteSearchQuery('');
+                updateSearchParams({
+                  noteContext: null,
+                  category: null,
+                  spaceId: null,
+                  plantId: null,
+                });
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+
+        {activeFilterChips.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onRemove}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1 text-xs text-slate-200 hover:bg-slate-700"
+              >
+                <span>{chip.label}</span>
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
   return (
     <DashboardLayout title="">
       <div className="-m-4 flex h-[calc(100vh-theme(spacing.16))] overflow-hidden bg-[#0B1120] font-sans text-slate-200 md:-m-8">
@@ -1459,197 +2276,7 @@ function EventsContent() {
                   {tasksHelperCopy}
                 </p>
 
-                <Tabs
-                  value={taskTabFilter}
-                  onValueChange={(value) =>
-                    updateSearchParams({ taskTab: value as TaskFilterTab })
-                  }
-                  className="mb-4"
-                >
-                  <TabsList className="grid w-full grid-cols-3 gap-1 bg-[#111d32] p-1 md:grid-cols-6">
-                    <TabsTrigger value="all">
-                      All
-                      {taskCounts.all > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                        >
-                          {taskCounts.all}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="pending">
-                      Pending
-                      {taskCounts.pending > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                        >
-                          {taskCounts.pending}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="issues">
-                      Issues
-                      {taskCounts.issues > 0 && (
-                        <Badge
-                          variant="destructive"
-                          className="ml-2 border-transparent px-1.5 text-[10px]"
-                        >
-                          {taskCounts.issues}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="dueSoon">
-                      Due Soon
-                      {taskCounts.dueSoon > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                        >
-                          {taskCounts.dueSoon}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="overdue">
-                      Overdue
-                      {taskCounts.overdue > 0 && (
-                        <Badge
-                          variant="destructive"
-                          className="ml-2 border-transparent px-1.5 text-[10px]"
-                        >
-                          {taskCounts.overdue}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="completed">
-                      Completed
-                      {taskCounts.completed > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                        >
-                          {taskCounts.completed}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  <Select
-                    value={taskPriorityFilter}
-                    onValueChange={(value: TaskPriority | 'all') =>
-                      updateSearchParams({ taskPriority: value })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={taskSpaceFilter}
-                    onValueChange={(value) =>
-                      updateSearchParams({ taskSpaceId: value, taskPlantId: null })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-                      <SelectValue placeholder="Space" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Spaces</SelectItem>
-                      <SelectItem value="none">No Space</SelectItem>
-                      {spaces.map((space) => (
-                        <SelectItem key={space.id} value={space.id}>
-                          {space.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={taskPlantFilter}
-                    onValueChange={(value) =>
-                      updateSearchParams({ taskPlantId: value })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-                      <SelectValue placeholder="Plant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Plants</SelectItem>
-                      <SelectItem value="none">No Plant</SelectItem>
-                      {availableTaskPlantsForFilter.map((plant) => (
-                        <SelectItem key={plant.id} value={plant.id}>
-                          {plant.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={taskGroupBy}
-                    onValueChange={(value: TaskGroupBy) =>
-                      updateSearchParams({ taskGroupBy: value })
-                    }
-                  >
-                    <SelectTrigger className="h-9 w-auto gap-2 border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white">
-                      <SelectValue placeholder="Group By" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Grouping</SelectItem>
-                      <SelectItem value="space">Space</SelectItem>
-                      <SelectItem value="plant">Plant</SelectItem>
-                      <SelectItem value="priority">Priority</SelectItem>
-                      <SelectItem value="dueDate">Due Date</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="relative ml-auto hidden max-w-[200px] flex-1 sm:block">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-                    <Input
-                      type="text"
-                      placeholder="Search tasks..."
-                      value={taskSearchQuery}
-                      onChange={(e) => setTaskSearchQuery(e.target.value)}
-                      className="h-9 rounded-md border-transparent bg-[#1e293b] pl-9 text-slate-200 placeholder:text-slate-500 focus-visible:ring-1 focus-visible:ring-slate-700"
-                    />
-                  </div>
-
-                  {(taskSearchQuery ||
-                    taskTabFilter !== 'all' ||
-                    taskPriorityFilter !== 'all' ||
-                    taskSpaceFilter !== 'all' ||
-                    taskPlantFilter !== 'all' ||
-                    taskGroupBy !== 'none') && (
-                    <Button
-                      variant="ghost"
-                      className="text-slate-400 hover:bg-slate-800 hover:text-white"
-                      onClick={() => {
-                        setTaskSearchQuery('');
-                        updateSearchParams({
-                          taskTab: null,
-                          taskPriority: null,
-                          taskSpaceId: null,
-                          taskPlantId: null,
-                          taskGroupBy: null,
-                          tab: null,
-                          priority: null,
-                          groupBy: null,
-                        });
-                      }}
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
+                {renderTasksFilters()}
               </>
             ) : (
               <>
@@ -1824,12 +2451,10 @@ function EventsContent() {
               <div className="rounded-xl border border-slate-800 bg-[#0B1120]/70 p-8 text-center">
                 <StickyNote className="mx-auto mb-4 h-10 w-10 text-slate-500" />
                 <h3 className="mb-2 text-lg font-medium text-slate-200">
-                  No notes found
+                  {noteEmptyStateTitle}
                 </h3>
                 <p className="mb-5 text-sm text-slate-500">
-                  {notes.length === 0
-                    ? 'Start documenting observations, issues, milestones, or photo progress here. Use tasks separately for work that needs scheduling.'
-                    : "Try adjusting your search or filters to find what you're looking for."}
+                  {noteEmptyStateDescription}
                 </p>
                 {notes.length === 0 && (
                   <Button

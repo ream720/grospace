@@ -286,7 +286,10 @@ function DashboardContent() {
           </Link>
 
           {/* Open Issues (High Priority + Overdue Pending Tasks) */}
-          <Link to="/events?type=tasks&tab=issues" className={statTileClassName}>
+          <Link
+            to="/events?type=tasks&taskStatus=issues"
+            className={statTileClassName}
+          >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Open Issues</p>
@@ -300,7 +303,10 @@ function DashboardContent() {
           </Link>
 
           {/* Tasks Due Soon */}
-          <Link to="/events?type=tasks&tab=dueSoon" className={statTileClassName}>
+          <Link
+            to="/events?type=tasks&taskStatus=dueSoon"
+            className={statTileClassName}
+          >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tasks Due</p>
@@ -674,6 +680,5 @@ export default function Dashboard() {
     </ProtectedRoute>
   );
 }
-
 
 

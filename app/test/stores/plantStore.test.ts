@@ -215,7 +215,7 @@ describe('Plant Store', () => {
     expect(state.plants[0].spaceId).toBe('space-2');
   });
 
-  it('should harvest plant', async () => {
+  it('should harvest plant without creating a linked note by default', async () => {
     // Set initial state with a plant
     usePlantStore.setState({ plants: [mockPlant] });
 
@@ -231,11 +231,116 @@ describe('Plant Store', () => {
     });
 
     const { harvestPlant } = usePlantStore.getState();
-    await harvestPlant('plant-1', harvestDate);
+    const result = await harvestPlant('plant-1', harvestDate);
 
     const state = usePlantStore.getState();
+    expect(result).toEqual({ noteCreated: false });
     expect(state.plants[0].status).toBe('harvested');
     expect(state.plants[0].actualHarvestDate).toEqual(harvestDate);
+    expect(noteService.create).not.toHaveBeenCalled();
+  });
+
+  it('should create a linked harvest note when enabled', async () => {
+    usePlantStore.setState({ plants: [mockPlant] });
+
+    const harvestDate = new Date('2024-06-01');
+    const harvestedPlant = {
+      ...mockPlant,
+      status: 'harvested' as const,
+      actualHarvestDate: harvestDate,
+    };
+    vi.mocked(plantService.harvestPlant).mockResolvedValue({
+      data: harvestedPlant,
+      error: undefined,
+    });
+
+    const { harvestPlant } = usePlantStore.getState();
+    const result = await harvestPlant('plant-1', harvestDate, {
+      createLinkedNote: true,
+      noteContent: 'Great harvest this cycle.',
+      noteTimestamp: harvestDate,
+    });
+
+    expect(result).toEqual({ noteCreated: true });
+    expect(noteService.create).toHaveBeenCalledWith(
+      {
+        content: 'Great harvest this cycle.',
+        category: 'milestone',
+        plantId: 'plant-1',
+        spaceId: 'space-1',
+        timestamp: harvestDate,
+      },
+      'user-1'
+    );
+  });
+
+  it('should use fallback harvest note content when note text is blank', async () => {
+    usePlantStore.setState({ plants: [mockPlant] });
+
+    const harvestDate = new Date('2024-06-01');
+    const harvestedPlant = {
+      ...mockPlant,
+      status: 'harvested' as const,
+      actualHarvestDate: harvestDate,
+    };
+    vi.mocked(plantService.harvestPlant).mockResolvedValue({
+      data: harvestedPlant,
+      error: undefined,
+    });
+
+    const { harvestPlant } = usePlantStore.getState();
+    const result = await harvestPlant('plant-1', harvestDate, {
+      createLinkedNote: true,
+      noteContent: '   ',
+      noteTimestamp: harvestDate,
+    });
+
+    expect(result).toEqual({ noteCreated: true });
+    expect(noteService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'Harvest recorded for Test Plant.',
+      }),
+      'user-1'
+    );
+  });
+
+  it('should keep harvest successful when linked note creation fails', async () => {
+    usePlantStore.setState({ plants: [mockPlant] });
+
+    const harvestDate = new Date('2024-06-01');
+    const harvestedPlant = {
+      ...mockPlant,
+      status: 'harvested' as const,
+      actualHarvestDate: harvestDate,
+    };
+    vi.mocked(plantService.harvestPlant).mockResolvedValue({
+      data: harvestedPlant,
+      error: undefined,
+    });
+    vi.mocked(noteService.create).mockRejectedValueOnce(
+      new Error('note write failed')
+    );
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { harvestPlant } = usePlantStore.getState();
+    const result = await harvestPlant('plant-1', harvestDate, {
+      createLinkedNote: true,
+      noteContent: 'Captured harvest details',
+      noteTimestamp: harvestDate,
+    });
+
+    expect(result).toEqual({
+      noteCreated: false,
+      noteError: 'note write failed',
+    });
+    expect(usePlantStore.getState().plants[0].status).toBe('harvested');
+    expect(usePlantStore.getState().error).toBe(null);
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Harvest recorded but linked note creation failed:',
+      expect.objectContaining({ plantId: 'plant-1' })
+    );
+
+    warnSpy.mockRestore();
   });
 
   it('should filter plants by space', () => {
