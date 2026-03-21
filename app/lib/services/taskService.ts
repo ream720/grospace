@@ -1,6 +1,7 @@
 import { BaseService, type ServiceResult } from './baseService';
-import type { Task, RecurrenceSettings } from '../types';
-import { addDays, addWeeks, addMonths, isAfter, isBefore, startOfDay } from 'date-fns';
+import type { Task } from '../types';
+import { addDays, isAfter, startOfDay } from 'date-fns';
+import { incrementRecurrenceDate } from '../utils/taskStatus';
 
 export class TaskService extends BaseService<Task> {
   constructor() {
@@ -95,13 +96,77 @@ export class TaskService extends BaseService<Task> {
    * Create a new task
    */
   async createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceResult<Task>> {
-    return this.create(taskData);
+    if (taskData.recurrence && !taskData.recurrenceStartDate) {
+      return {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Recurring tasks require a start date',
+        },
+      };
+    }
+
+    const normalizedTaskData = taskData.recurrence
+      ? {
+          ...taskData,
+          recurrenceOccurrence: taskData.recurrenceOccurrence ?? 1,
+          recurrenceStartDate: taskData.recurrenceStartDate,
+        }
+      : taskData;
+
+    const result = await this.create(normalizedTaskData);
+
+    if (!result.data?.recurrence) {
+      return result;
+    }
+
+    const normalizedTask = this.normalizeRecurringTask(result.data);
+    if (!normalizedTask) {
+      return {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Recurring tasks require a start date',
+        },
+      };
+    }
+
+    if (normalizedTask.recurrenceSeriesId === result.data.recurrenceSeriesId) {
+      return { ...result, data: normalizedTask };
+    }
+
+    const backfilledResult = await this.update(result.data.id, {
+      recurrenceSeriesId: normalizedTask.recurrenceSeriesId,
+    });
+
+    if (backfilledResult.data) {
+      const normalizedBackfilledTask = this.normalizeRecurringTask(backfilledResult.data);
+      if (!normalizedBackfilledTask) {
+        return {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Recurring tasks require a start date',
+          },
+        };
+      }
+
+      return { data: normalizedBackfilledTask };
+    }
+
+    return { ...result, data: normalizedTask };
   }
 
   /**
    * Update a task
    */
   async updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ServiceResult<Task>> {
+    if (updates.recurrence && !updates.recurrenceStartDate) {
+      return {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Recurring tasks require a start date',
+        },
+      };
+    }
+
     return this.update(id, updates);
   }
 
@@ -116,8 +181,14 @@ export class TaskService extends BaseService<Task> {
     });
 
     if (result.data && result.data.recurrence) {
+      const normalizedCompletedTask = this.normalizeRecurringTask(result.data);
+      if (!normalizedCompletedTask) {
+        return result;
+      }
+
       // Create next recurring task
-      await this.createNextRecurringTask(result.data);
+      await this.createNextRecurringTask(normalizedCompletedTask);
+      return { ...result, data: normalizedCompletedTask };
     }
 
     return result;
@@ -138,8 +209,15 @@ export class TaskService extends BaseService<Task> {
       return null;
     }
 
-    const { recurrence } = completedTask;
-    const nextDueDate = this.calculateNextDueDate(completedTask.dueDate, recurrence);
+    const normalizedCompletedTask = this.normalizeRecurringTask(completedTask);
+    if (!normalizedCompletedTask) {
+      return null;
+    }
+    const recurrence = normalizedCompletedTask.recurrence;
+    if (!recurrence) {
+      return null;
+    }
+    const nextDueDate = incrementRecurrenceDate(normalizedCompletedTask.dueDate, recurrence);
 
     // Check if we should create the next task (not past end date)
     if (recurrence.endDate && isAfter(nextDueDate, recurrence.endDate)) {
@@ -148,36 +226,38 @@ export class TaskService extends BaseService<Task> {
 
     // Create the next task
     const nextTaskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
-      userId: completedTask.userId,
-      plantId: completedTask.plantId,
-      spaceId: completedTask.spaceId,
-      title: completedTask.title,
-      description: completedTask.description,
+      userId: normalizedCompletedTask.userId,
+      plantId: normalizedCompletedTask.plantId,
+      spaceId: normalizedCompletedTask.spaceId,
+      title: normalizedCompletedTask.title,
+      description: normalizedCompletedTask.description,
       dueDate: nextDueDate,
-      priority: completedTask.priority,
+      priority: normalizedCompletedTask.priority,
       status: 'pending',
-      recurrence: completedTask.recurrence
+      recurrence: normalizedCompletedTask.recurrence,
+      recurrenceSeriesId: normalizedCompletedTask.recurrenceSeriesId,
+      recurrenceOccurrence: (normalizedCompletedTask.recurrenceOccurrence ?? 1) + 1,
+      recurrenceStartDate: normalizedCompletedTask.recurrenceStartDate,
     };
 
     return this.createTask(nextTaskData);
   }
 
-  /**
-   * Calculate the next due date based on recurrence settings
-   */
-  private calculateNextDueDate(currentDueDate: Date, recurrence: RecurrenceSettings): Date {
-    const { type, interval } = recurrence;
-
-    switch (type) {
-      case 'daily':
-        return addDays(currentDueDate, interval);
-      case 'weekly':
-        return addWeeks(currentDueDate, interval);
-      case 'monthly':
-        return addMonths(currentDueDate, interval);
-      default:
-        return addDays(currentDueDate, 1);
+  private normalizeRecurringTask(task: Task): Task | null {
+    if (!task.recurrence) {
+      return task;
     }
+
+    if (!task.recurrenceStartDate) {
+      return null;
+    }
+
+    return {
+      ...task,
+      recurrenceSeriesId: task.recurrenceSeriesId ?? task.id,
+      recurrenceOccurrence: task.recurrenceOccurrence ?? 1,
+      recurrenceStartDate: task.recurrenceStartDate,
+    };
   }
 
   /**

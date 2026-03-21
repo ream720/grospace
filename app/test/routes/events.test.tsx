@@ -94,10 +94,12 @@ vi.mock('../../components/tasks/TaskCompletionDialog', () => ({
   TaskCompletionDialog: ({
     task,
     open,
+    defaultNoteCategory,
     onComplete,
   }: {
     task: Task | null;
     open: boolean;
+    defaultNoteCategory?: NoteCategory;
     onComplete: (
       taskId: string,
       noteData?: {
@@ -112,6 +114,7 @@ vi.mock('../../components/tasks/TaskCompletionDialog', () => ({
 
     return (
       <div role="dialog" aria-label="Mock Task Completion Dialog">
+        <p>Default category: {defaultNoteCategory ?? 'none'}</p>
         <button type="button" onClick={() => void onComplete(task.id)}>
           Complete without note
         </button>
@@ -278,6 +281,7 @@ describe('Events route', () => {
           interval: 2,
           endDate: new Date('2026-03-31T10:00:00'),
         },
+        recurrenceStartDate: new Date('2026-03-10T10:00:00'),
         completedAt: new Date('2026-03-11T10:00:00'),
         createdAt: new Date('2026-03-01T10:00:00'),
         updatedAt: new Date('2026-03-11T10:00:00'),
@@ -293,11 +297,141 @@ describe('Events route', () => {
     expect(
       screen.getAllByText('Every 2 weeks until Mar 31, 2026').length
     ).toBeGreaterThan(0);
+    expect(screen.getByText('Recurring completion log')).toBeInTheDocument();
+    expect(
+      screen.getByText('1 of 2 scheduled completions logged')
+    ).toBeInTheDocument();
     expect(screen.getByText('Use half-strength nutrients')).toBeInTheDocument();
     expect(screen.getByText('Tomato 1 (Roma)')).toBeInTheDocument();
     expect(screen.getByText('Greenhouse')).toBeInTheDocument();
     expect(screen.getAllByText(/Mar 11, 2026/).length).toBeGreaterThan(0);
     expect(mockLoadTasks).toHaveBeenCalled();
+  });
+
+  it('shows recurring log occurrences from explicit recurrence start date through end date', async () => {
+    mockTasks = [
+      {
+        id: 'task-recur-1',
+        userId: 'user-1',
+        title: 'Mist w/water',
+        description: 'lightly mist seedling tray',
+        dueDate: new Date('2026-03-16T10:00:00'),
+        priority: 'high',
+        status: 'pending',
+        plantId: 'plant-1',
+        spaceId: 'space-1',
+        recurrence: {
+          type: 'daily',
+          interval: 2,
+          endDate: new Date('2026-03-20T10:00:00'),
+        },
+        recurrenceStartDate: new Date('2026-03-16T10:00:00'),
+        createdAt: new Date('2026-03-16T10:00:00'),
+        updatedAt: new Date('2026-03-16T10:00:00'),
+      },
+    ];
+
+    render(<EventsPage />);
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Mist w/water').length).toBeGreaterThan(0)
+    );
+
+    expect(screen.getByText('Recurring completion log')).toBeInTheDocument();
+    expect(screen.getByText('0 of 3 scheduled completions logged')).toBeInTheDocument();
+    expect(screen.getByText('Occurrence 1')).toBeInTheDocument();
+    expect(screen.getByText('Occurrence 2')).toBeInTheDocument();
+    expect(screen.getByText('Occurrence 3')).toBeInTheDocument();
+    expect(screen.getAllByText('Due Mar 16, 2026').length).toBeGreaterThan(0);
+    expect(screen.getByText('Due Mar 18, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Due Mar 20, 2026')).toBeInTheDocument();
+  });
+
+  it('opens completion flow when clicking an actionable recurring occurrence card', async () => {
+    mockTasks = [
+      {
+        id: 'task-recur-click',
+        userId: 'user-1',
+        title: 'Clickable recurring',
+        dueDate: new Date('2026-03-16T10:00:00'),
+        priority: 'medium',
+        status: 'pending',
+        recurrence: {
+          type: 'daily',
+          interval: 2,
+          endDate: new Date('2026-03-20T10:00:00'),
+        },
+        recurrenceStartDate: new Date('2026-03-16T10:00:00'),
+        createdAt: new Date('2026-03-16T10:00:00'),
+        updatedAt: new Date('2026-03-16T10:00:00'),
+      },
+    ];
+
+    render(<EventsPage />);
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Clickable recurring').length).toBeGreaterThan(0)
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Mark occurrence 1 complete' })
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: 'Mock Task Completion Dialog' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Default category: recurringTask')
+    ).toBeInTheDocument();
+  });
+
+  it('creates an occurrence task and opens completion flow with recurringTask default category when no task instance exists', async () => {
+    mockTasks = [
+      {
+        id: 'task-recur-create-entry',
+        userId: 'user-1',
+        title: 'Create occurrence entry',
+        dueDate: new Date('2026-03-16T10:00:00'),
+        priority: 'medium',
+        status: 'pending',
+        recurrence: {
+          type: 'daily',
+          interval: 2,
+          endDate: new Date('2026-03-20T10:00:00'),
+        },
+        recurrenceStartDate: new Date('2026-03-16T10:00:00'),
+        createdAt: new Date('2026-03-16T10:00:00'),
+        updatedAt: new Date('2026-03-16T10:00:00'),
+      },
+    ];
+
+    render(<EventsPage />);
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Create occurrence entry').length).toBeGreaterThan(0)
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Mark occurrence 2 complete' })
+    );
+
+    await waitFor(() => {
+      expect(mockCreateTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Create occurrence entry',
+          status: 'pending',
+          recurrenceOccurrence: 2,
+          dueDate: new Date('2026-03-18T10:00:00'),
+        })
+      );
+    });
+
+    expect(
+      screen.getByRole('dialog', { name: 'Mock Task Completion Dialog' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Default category: recurringTask')
+    ).toBeInTheDocument();
   });
 
   it('shows overdue task fallbacks for missing optional fields', async () => {
@@ -587,6 +721,66 @@ describe('Events route', () => {
     expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0);
   });
 
+  it('shows overdue tasks plus high-priority tasks due in the next 24 hours for issues filter', async () => {
+    mockSearchParams = new URLSearchParams('type=tasks&taskStatus=issues');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const overdueDate = new Date(today);
+    overdueDate.setDate(overdueDate.getDate() - 1);
+
+    const dueSoonHighDate = new Date(today);
+    dueSoonHighDate.setHours(11, 0, 0, 0);
+
+    const futureHighDate = new Date(today);
+    futureHighDate.setDate(futureHighDate.getDate() + 3);
+    futureHighDate.setHours(11, 0, 0, 0);
+
+    mockTasks = [
+      {
+        id: 'task-issues-overdue',
+        userId: 'user-1',
+        title: 'Overdue low task',
+        dueDate: overdueDate,
+        priority: 'low',
+        status: 'pending',
+        createdAt: overdueDate,
+        updatedAt: overdueDate,
+      },
+      {
+        id: 'task-issues-high-soon',
+        userId: 'user-1',
+        title: 'High priority due soon',
+        dueDate: dueSoonHighDate,
+        priority: 'high',
+        status: 'pending',
+        createdAt: dueSoonHighDate,
+        updatedAt: dueSoonHighDate,
+      },
+      {
+        id: 'task-issues-high-future',
+        userId: 'user-1',
+        title: 'High priority future task',
+        dueDate: futureHighDate,
+        priority: 'high',
+        status: 'pending',
+        createdAt: futureHighDate,
+        updatedAt: futureHighDate,
+      },
+    ];
+
+    render(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Overdue low task').length).toBeGreaterThan(0);
+    });
+
+    expect(
+      screen.getAllByText('High priority due soon').length
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('High priority future task')).not.toBeInTheDocument();
+  });
+
   it('shows task context/status controls and clears task filter params', async () => {
     mockSearchParams = new URLSearchParams(
       'type=tasks&taskContext=plants&taskStatus=completed&taskPriority=medium&taskGroupBy=dueDate'
@@ -611,7 +805,7 @@ describe('Events route', () => {
     );
     expect(
       screen.getByText(
-        /Use Filters for smart status views: Issues shows pending high-priority or overdue tasks, and Due Soon shows pending tasks due today or tomorrow\./i
+        /Use Filters for smart status views: Issues shows overdue tasks plus high-priority tasks due in the next 24 hours, and Due Soon shows pending tasks due in the next 24 hours\./i
       )
     ).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Plants/i })).toBeInTheDocument();

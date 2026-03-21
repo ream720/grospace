@@ -92,6 +92,14 @@ import {
   type Note,
   type NoteCategory,
 } from '../lib/types/note';
+import {
+  buildRecurringTaskChecklist,
+  isTaskDueSoon,
+  isTaskNeedsAttention,
+  isTaskOverdue,
+  type RecurringTaskChecklistItem,
+  type RecurringTaskChecklist,
+} from '../lib/utils/taskStatus';
 
 type EventsView = 'notes' | 'tasks';
 type TaskStatusFilter =
@@ -210,14 +218,7 @@ const formatDateTime = (date?: Date) =>
 const notesHelperCopy =
   'Use notes for observations, issues, milestones, photo updates, and other context you may want to find later. Use tasks for work that needs a due date or repeat schedule.';
 const tasksHelperCopy =
-  'Use Filters for smart status views: Issues shows pending high-priority or overdue tasks, and Due Soon shows pending tasks due today or tomorrow.';
-
-const isTaskOverdue = (task: Task) => {
-  if (task.status === 'completed') return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return task.dueDate < today;
-};
+  'Use Filters for smart status views: Issues shows overdue tasks plus high-priority tasks due in the next 24 hours, and Due Soon shows pending tasks due in the next 24 hours.';
 
 const getTaskStatusCopy = (task: Task) => {
   if (task.status === 'completed') {
@@ -284,6 +285,8 @@ const getNoteCategoryClassName = (category: NoteCategory) => {
       return 'bg-red-500/20 text-red-300 hover:bg-red-500/30';
     case 'milestone':
       return 'bg-fuchsia-500/20 text-fuchsia-300 hover:bg-fuchsia-500/30';
+    case 'recurringTask':
+      return 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30';
     default:
       return 'bg-slate-500/20 text-slate-300 hover:bg-slate-500/30';
   }
@@ -346,7 +349,9 @@ function TaskDetailsContent({
   task,
   spaces,
   plants,
+  recurrenceChecklist,
   onMarkComplete,
+  onSelectRecurringOccurrence,
   onEdit,
   onDelete,
   onClose,
@@ -354,7 +359,9 @@ function TaskDetailsContent({
   task: Task | null;
   spaces: GrowSpace[];
   plants: Plant[];
+  recurrenceChecklist?: RecurringTaskChecklist | null;
   onMarkComplete?: (task: Task) => void;
+  onSelectRecurringOccurrence?: (occurrence: RecurringTaskChecklistItem) => void;
   onEdit?: (task: Task) => void;
   onDelete?: (task: Task) => void;
   onClose?: () => void;
@@ -513,6 +520,86 @@ function TaskDetailsContent({
             {formatDateTime(task.updatedAt)}
           </DetailField>
         </div>
+
+        {task.recurrence && recurrenceChecklist && (
+          <div className="mt-10">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-medium text-slate-500">
+                Recurring completion log
+              </h4>
+              <span className="text-xs text-slate-400">
+                {recurrenceChecklist.completedCount} of{' '}
+                {recurrenceChecklist.totalCount} scheduled completions logged
+              </span>
+            </div>
+
+            <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              {recurrenceChecklist.items.map((item) => {
+                const statusClassName =
+                  item.status === 'completed'
+                    ? 'text-emerald-400'
+                    : item.status === 'overdue'
+                      ? 'text-amber-400'
+                      : item.status === 'pending'
+                        ? 'text-sky-300'
+                        : 'text-slate-400';
+                const canSelectOccurrence =
+                  item.status !== 'completed' &&
+                  Boolean(onSelectRecurringOccurrence);
+                const cardClassName = `rounded-lg border px-3 py-2 ${
+                  item.isCurrent
+                    ? 'border-emerald-500/60 bg-emerald-500/10'
+                    : 'border-slate-800 bg-slate-950/40'
+                } ${
+                  canSelectOccurrence
+                    ? 'cursor-pointer transition hover:border-emerald-400/70 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60'
+                    : ''
+                }`;
+                const cardContent = (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-slate-200">
+                        Occurrence {item.occurrenceNumber}
+                      </p>
+                      <p className={`text-xs font-medium capitalize ${statusClassName}`}>
+                        {item.status}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Due {formatDate(item.dueDate)}
+                    </p>
+                    {item.completedAt && (
+                      <p className="text-xs text-slate-500">
+                        Completed {formatDateTime(item.completedAt)}
+                      </p>
+                    )}
+                  </>
+                );
+
+                return (
+                  canSelectOccurrence && onSelectRecurringOccurrence ? (
+                    <button
+                      key={`${item.occurrenceNumber}-${item.dueDate.toISOString()}`}
+                      type="button"
+                      className={cardClassName}
+                      onClick={() => onSelectRecurringOccurrence(item)}
+                      aria-label={`Mark occurrence ${item.occurrenceNumber} complete`}
+                    >
+                      {cardContent}
+                    </button>
+                  ) : (
+                    <div
+                      key={`${item.occurrenceNumber}-${item.dueDate.toISOString()}`}
+                      className={cardClassName}
+                    >
+                      {cardContent}
+                    </div>
+                  )
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
@@ -778,6 +865,8 @@ function EventsContent() {
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [completingTask, setCompletingTask] = useState<Task | null>(null);
+  const [completionDefaultNoteCategory, setCompletionDefaultNoteCategory] =
+    useState<NoteCategory | undefined>(undefined);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
@@ -951,33 +1040,22 @@ function EventsContent() {
       filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
     }
 
-    const today = startOfDay(new Date());
-    const dueSoonWindowEnd = new Date(today);
-    dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
+    const referenceDate = new Date();
 
     switch (taskStatusFilter) {
       case 'pending':
         filtered = filtered.filter((task) => task.status === 'pending');
         break;
       case 'issues':
-        filtered = filtered.filter(
-          (task) =>
-            task.status === 'pending' &&
-            (task.priority === 'high' || task.dueDate < today)
+        filtered = filtered.filter((task) =>
+          isTaskNeedsAttention(task, referenceDate)
         );
         break;
       case 'dueSoon':
-        filtered = filtered.filter(
-          (task) =>
-            task.status === 'pending' &&
-            task.dueDate >= today &&
-            task.dueDate <= dueSoonWindowEnd
-        );
+        filtered = filtered.filter((task) => isTaskDueSoon(task, referenceDate));
         break;
       case 'overdue':
-        filtered = filtered.filter(
-          (task) => task.status === 'pending' && task.dueDate < today
-        );
+        filtered = filtered.filter((task) => isTaskOverdue(task, referenceDate));
         break;
       case 'completed':
         filtered = filtered.filter((task) => task.status === 'completed');
@@ -1057,28 +1135,16 @@ function EventsContent() {
       filtered = filtered.filter((task) => task.plantId === effectiveTaskPlantFilter);
     }
 
-    const today = startOfDay(new Date());
-    const dueSoonWindowEnd = new Date(today);
-    dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
+    const referenceDate = new Date();
 
     return {
       all: filtered.length,
       pending: filtered.filter((task) => task.status === 'pending').length,
       completed: filtered.filter((task) => task.status === 'completed').length,
-      issues: filtered.filter(
-        (task) =>
-          task.status === 'pending' &&
-          (task.priority === 'high' || task.dueDate < today)
-      ).length,
-      dueSoon: filtered.filter(
-        (task) =>
-          task.status === 'pending' &&
-          task.dueDate >= today &&
-          task.dueDate <= dueSoonWindowEnd
-      ).length,
-      overdue: filtered.filter(
-        (task) => task.status === 'pending' && task.dueDate < today
-      ).length,
+      issues: filtered.filter((task) => isTaskNeedsAttention(task, referenceDate))
+        .length,
+      dueSoon: filtered.filter((task) => isTaskDueSoon(task, referenceDate)).length,
+      overdue: filtered.filter((task) => isTaskOverdue(task, referenceDate)).length,
     };
   }, [
     tasks,
@@ -1218,6 +1284,10 @@ function EventsContent() {
   const selectedNote = selectedNoteId
     ? (filteredNotes.find((note) => note.id === selectedNoteId) ?? null)
     : null;
+  const selectedTaskRecurringChecklist = useMemo(
+    () => buildRecurringTaskChecklist(selectedTask, tasks),
+    [selectedTask, tasks]
+  );
 
   const availableTaskPlantsForFilter = plants;
 
@@ -1340,13 +1410,69 @@ function EventsContent() {
     }
   };
 
-  const openTaskCompletionFromList = (event: MouseEvent, task: Task) => {
-    event.stopPropagation();
+  const openTaskCompletion = (
+    task: Task,
+    defaultNoteCategory?: NoteCategory
+  ) => {
+    setCompletionDefaultNoteCategory(defaultNoteCategory);
     setCompletingTask(task);
   };
 
+  const openTaskCompletionFromList = (event: MouseEvent, task: Task) => {
+    event.stopPropagation();
+    openTaskCompletion(task);
+  };
+
   const openTaskCompletionFromDetails = (task: Task) => {
-    setCompletingTask(task);
+    openTaskCompletion(task);
+  };
+
+  const handleRecurringOccurrenceSelection = (
+    occurrence: RecurringTaskChecklistItem
+  ) => {
+    const markOccurrence = async () => {
+      if (!occurrence.taskId) {
+        if (!selectedTask?.recurrence || !selectedTask.recurrenceStartDate) {
+          toast.error('Unable to mark this occurrence complete.');
+          return;
+        }
+
+        try {
+          const occurrenceTask = await createTask({
+            userId: selectedTask.userId,
+            title: selectedTask.title,
+            description: selectedTask.description,
+            dueDate: occurrence.dueDate,
+            priority: selectedTask.priority,
+            status: 'pending',
+            spaceId: selectedTask.spaceId,
+            plantId: selectedTask.plantId,
+            recurrence: selectedTask.recurrence,
+            recurrenceSeriesId: selectedTask.recurrenceSeriesId ?? selectedTask.id,
+            recurrenceOccurrence: occurrence.occurrenceNumber,
+            recurrenceStartDate: selectedTask.recurrenceStartDate,
+          });
+          openTaskCompletion(occurrenceTask, 'recurringTask');
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Failed to mark occurrence complete'
+          );
+        }
+        return;
+      }
+
+      const occurrenceTask = tasks.find((task) => task.id === occurrence.taskId);
+      if (!occurrenceTask) {
+        toast.error('Unable to find that occurrence task.');
+        return;
+      }
+
+      openTaskCompletion(occurrenceTask, 'recurringTask');
+    };
+
+    void markOccurrence();
   };
 
   const handleTaskCompletion = async (
@@ -2547,7 +2673,9 @@ function EventsContent() {
                 task={selectedTask}
                 spaces={spaces}
                 plants={plants}
+                recurrenceChecklist={selectedTaskRecurringChecklist}
                 onMarkComplete={openTaskCompletionFromDetails}
+                onSelectRecurringOccurrence={handleRecurringOccurrenceSelection}
                 onEdit={handleEditTask}
                 onDelete={handleRequestDeleteTask}
                 onClose={() => setSelectedTaskId(null)}
@@ -2588,7 +2716,9 @@ function EventsContent() {
                 task={selectedTask}
                 spaces={spaces}
                 plants={plants}
+                recurrenceChecklist={selectedTaskRecurringChecklist}
                 onMarkComplete={openTaskCompletionFromDetails}
+                onSelectRecurringOccurrence={handleRecurringOccurrenceSelection}
                 onEdit={(task) => {
                   setMobileDetailsOpen(false);
                   handleEditTask(task);
@@ -2623,7 +2753,13 @@ function EventsContent() {
         spaces={spaces}
         plants={plants}
         open={!!completingTask}
-        onOpenChange={(open) => !open && setCompletingTask(null)}
+        defaultNoteCategory={completionDefaultNoteCategory}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletingTask(null);
+            setCompletionDefaultNoteCategory(undefined);
+          }
+        }}
         onComplete={handleTaskCompletion}
       />
 

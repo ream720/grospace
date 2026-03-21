@@ -115,6 +115,83 @@ describe('TaskService', () => {
 
       expect(createSpy).toHaveBeenCalledWith(taskData);
     });
+
+    it('should seed recurrence metadata for recurring tasks', async () => {
+      const recurringDueDate = new Date('2026-03-10T10:00:00');
+      const createSpy = vi.spyOn(taskService, 'create').mockResolvedValue({
+        data: {
+          ...mockTask,
+          id: 'recurring-create-id',
+          dueDate: recurringDueDate,
+          recurrenceStartDate: recurringDueDate,
+          recurrence: {
+            type: 'daily',
+            interval: 2,
+          },
+        },
+      });
+      const updateSpy = vi.spyOn(taskService, 'update').mockResolvedValue({
+        data: {
+          ...mockTask,
+          id: 'recurring-create-id',
+          dueDate: recurringDueDate,
+          recurrence: {
+            type: 'daily',
+            interval: 2,
+          },
+          recurrenceSeriesId: 'recurring-create-id',
+          recurrenceOccurrence: 1,
+          recurrenceStartDate: recurringDueDate,
+        },
+      });
+
+      const result = await taskService.createTask({
+        userId: mockUserId,
+        title: 'Recurring task',
+        dueDate: recurringDueDate,
+        priority: 'medium',
+        status: 'pending',
+        recurrenceStartDate: recurringDueDate,
+        recurrence: {
+          type: 'daily',
+          interval: 2,
+        },
+      });
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurrenceOccurrence: 1,
+          recurrenceStartDate: recurringDueDate,
+        })
+      );
+      expect(updateSpy).toHaveBeenCalledWith('recurring-create-id', {
+        recurrenceSeriesId: 'recurring-create-id',
+      });
+      expect(result.data?.recurrenceSeriesId).toBe('recurring-create-id');
+      expect(result.data?.recurrenceOccurrence).toBe(1);
+    });
+
+    it('should reject recurring tasks without recurrenceStartDate', async () => {
+      const createSpy = vi.spyOn(taskService, 'create').mockResolvedValue({
+        data: mockTask
+      });
+
+      const result = await taskService.createTask({
+        userId: mockUserId,
+        title: 'Invalid recurring task',
+        dueDate: new Date('2026-03-10T10:00:00'),
+        priority: 'high',
+        status: 'pending',
+        recurrence: {
+          type: 'daily',
+          interval: 1,
+        },
+      });
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(result.error?.code).toBe('VALIDATION_ERROR');
+      expect(result.error?.message).toMatch(/require a start date/i);
+    });
   });
 
   describe('completeTask', () => {
@@ -150,6 +227,7 @@ describe('TaskService', () => {
         ...mockTask,
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: mockTask.dueDate,
         recurrence: {
           type: 'daily',
           interval: 1,
@@ -194,6 +272,7 @@ describe('TaskService', () => {
         dueDate: new Date('2024-01-14'),
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: new Date('2024-01-14'),
         recurrence: {
           type: 'daily',
           interval: 1,
@@ -222,6 +301,7 @@ describe('TaskService', () => {
         dueDate: baseDueDate,
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: baseDueDate,
         recurrence: {
           type: 'daily',
           interval: 3,
@@ -250,6 +330,7 @@ describe('TaskService', () => {
         dueDate: baseDueDate,
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: baseDueDate,
         recurrence: {
           type: 'weekly',
           interval: 2,
@@ -278,6 +359,7 @@ describe('TaskService', () => {
         dueDate: baseDueDate,
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: baseDueDate,
         recurrence: {
           type: 'monthly',
           interval: 1,
@@ -305,6 +387,7 @@ describe('TaskService', () => {
         dueDate: new Date('2024-03-01'),
         status: 'completed',
         completedAt: new Date(),
+        recurrenceStartDate: new Date('2024-03-01'),
         recurrence: {
           type: 'weekly',
           interval: 1,
@@ -330,6 +413,30 @@ describe('TaskService', () => {
       expect(createArgs.plantId).toBe(mockPlantId);
       expect(createArgs.recurrence).toEqual(recurringTask.recurrence);
       expect(createArgs.status).toBe('pending');
+      expect(createArgs.recurrenceSeriesId).toBe(recurringTask.id);
+      expect(createArgs.recurrenceOccurrence).toBe(2);
+      expect(createArgs.recurrenceStartDate?.getTime()).toBe(
+        recurringTask.dueDate.getTime()
+      );
+    });
+  });
+
+  describe('updateTask', () => {
+    it('should reject recurring updates without recurrenceStartDate', async () => {
+      const updateSpy = vi.spyOn(taskService, 'update').mockResolvedValue({
+        data: mockTask
+      });
+
+      const result = await taskService.updateTask(mockTaskId, {
+        recurrence: {
+          type: 'weekly',
+          interval: 1,
+        },
+      });
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(result.error?.code).toBe('VALIDATION_ERROR');
+      expect(result.error?.message).toMatch(/require a start date/i);
     });
   });
 

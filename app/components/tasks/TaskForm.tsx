@@ -24,18 +24,34 @@ const taskSchema = z
   .object({
     title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
     description: z.string().optional(),
-    dueDate: z.date(),
+    dueDate: z.date().optional(),
     priority: z.enum(['low', 'medium', 'high']),
     spaceId: z.string().optional(),
     plantId: z.string().optional(),
     hasRecurrence: z.boolean(),
+    recurrenceStartDate: z.date().optional(),
     recurrenceType: z.enum(['daily', 'weekly', 'monthly']).optional(),
     recurrenceInterval: z.number().min(1).max(365).optional(),
     recurrenceEndDate: z.date().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.hasRecurrence) {
+      if (!data.dueDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Due date is required',
+          path: ['dueDate'],
+        });
+      }
       return;
+    }
+
+    if (!data.recurrenceStartDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Start date is required',
+        path: ['recurrenceStartDate'],
+      });
     }
 
     if (!data.recurrenceType) {
@@ -51,6 +67,18 @@ const taskSchema = z
         code: z.ZodIssueCode.custom,
         message: 'Recurrence interval is required',
         path: ['recurrenceInterval'],
+      });
+    }
+
+    if (
+      data.recurrenceStartDate &&
+      data.recurrenceEndDate &&
+      data.recurrenceEndDate < data.recurrenceStartDate
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'End date cannot be before start date',
+        path: ['recurrenceEndDate'],
       });
     }
   });
@@ -90,6 +118,7 @@ export function TaskForm({
 }: TaskFormProps) {
   const { user } = useAuthStore();
   const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
 
   const initialPlant = useMemo(
@@ -117,6 +146,7 @@ export function TaskForm({
       spaceId: resolvedInitialSpaceId || undefined,
       plantId: resolvedInitialPlantId || undefined,
       hasRecurrence: !!task?.recurrence,
+      recurrenceStartDate: task?.recurrenceStartDate,
       recurrenceType: task?.recurrence?.type || 'weekly',
       recurrenceInterval: task?.recurrence?.interval || 1,
       recurrenceEndDate: task?.recurrence?.endDate,
@@ -132,6 +162,7 @@ export function TaskForm({
       spaceId: task?.spaceId || resolvedInitialSpaceId || undefined,
       plantId: task?.plantId || resolvedInitialPlantId || undefined,
       hasRecurrence: !!task?.recurrence,
+      recurrenceStartDate: task?.recurrenceStartDate,
       recurrenceType: task?.recurrence?.type || 'weekly',
       recurrenceInterval: task?.recurrence?.interval || 1,
       recurrenceEndDate: task?.recurrence?.endDate,
@@ -141,6 +172,7 @@ export function TaskForm({
   const watchedSpaceId = watch('spaceId');
   const watchedHasRecurrence = watch('hasRecurrence');
   const watchedDueDate = watch('dueDate');
+  const watchedStartDate = watch('recurrenceStartDate');
   const watchedEndDate = watch('recurrenceEndDate');
   const watchedPriority = watch('priority');
 
@@ -155,8 +187,14 @@ export function TaskForm({
 
     try {
       let recurrence: Task['recurrence'] = undefined;
+      let recurrenceStartDate: Date | undefined;
+      let dueDate: Date;
       if (data.hasRecurrence) {
-        if (!data.recurrenceType || !data.recurrenceInterval) {
+        if (
+          !data.recurrenceType ||
+          !data.recurrenceInterval ||
+          !data.recurrenceStartDate
+        ) {
           return;
         }
 
@@ -165,18 +203,29 @@ export function TaskForm({
           interval: data.recurrenceInterval,
           endDate: data.recurrenceEndDate,
         };
+        recurrenceStartDate = data.recurrenceStartDate;
+        dueDate = data.recurrenceStartDate;
+      } else {
+        if (!data.dueDate) {
+          return;
+        }
+
+        dueDate = data.dueDate;
       }
 
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
         title: data.title,
         description: data.description || undefined,
-        dueDate: data.dueDate,
+        dueDate,
         priority: data.priority,
         status: task?.status || 'pending',
         spaceId: data.spaceId || undefined,
         plantId: data.plantId || undefined,
         recurrence,
+        recurrenceSeriesId: task?.recurrenceSeriesId,
+        recurrenceOccurrence: task?.recurrenceOccurrence,
+        recurrenceStartDate,
         completedAt: task?.completedAt,
       };
 
@@ -244,41 +293,175 @@ export function TaskForm({
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label>Due Date *</Label>
-          <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal',
-                  !watchedDueDate && 'text-muted-foreground',
-                  errors.dueDate && 'border-red-500'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {watchedDueDate ? format(watchedDueDate, 'PPP') : 'Pick a date'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={watchedDueDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setValue('dueDate', date);
-                    setDueDateOpen(false);
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="hasRecurrence"
+              checked={watchedHasRecurrence}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setValue('hasRecurrence', enabled);
+
+                if (enabled && !watchedStartDate) {
+                  setValue('recurrenceStartDate', watchedDueDate || new Date());
+                }
+
+                if (!enabled && watchedStartDate) {
+                  setValue('dueDate', watchedStartDate);
+                }
+              }}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="hasRecurrence">Recurring Task</Label>
+          </div>
           <p className="text-sm text-muted-foreground">
-            Choose the date you want to be reminded to do the work. If the work already happened and you only want a record, use a note instead.
+            Turn this on for repeatable maintenance like feeding, inspections, or other routine care.
           </p>
-          {errors.dueDate && <p className="text-sm text-red-500">{errors.dueDate.message}</p>}
+
+          {watchedHasRecurrence && (
+            <div className="space-y-4 border-l-2 border-gray-200 pl-6">
+              <div className="space-y-2">
+                <Label>Start Date *</Label>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !watchedStartDate && 'text-muted-foreground',
+                        errors.recurrenceStartDate && 'border-red-500'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {watchedStartDate ? format(watchedStartDate, 'PPP') : 'Pick a start date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={watchedStartDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setValue('recurrenceStartDate', date);
+                          setStartDateOpen(false);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-sm text-muted-foreground">
+                  This is the first scheduled date for the recurring series.
+                </p>
+                {errors.recurrenceStartDate && (
+                  <p className="text-sm text-red-500">{errors.recurrenceStartDate.message}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Repeat Every</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="365"
+                      {...register('recurrenceInterval', { valueAsNumber: true })}
+                      className="w-20"
+                    />
+                    <Select
+                      value={watch('recurrenceType')}
+                      onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setValue('recurrenceType', value)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Day(s)</SelectItem>
+                        <SelectItem value="weekly">Week(s)</SelectItem>
+                        <SelectItem value="monthly">Month(s)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>End Date (Optional)</Label>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn('w-full justify-start text-left font-normal', !watchedEndDate && 'text-muted-foreground')}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {watchedEndDate ? format(watchedEndDate, 'PPP') : 'No end date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={watchedEndDate}
+                      onSelect={(date) => {
+                        setValue('recurrenceEndDate', date);
+                        setEndDateOpen(false);
+                      }}
+                      disabled={(date) =>
+                        watchedStartDate ? date < watchedStartDate : false
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-sm text-muted-foreground">
+                  Leave this empty if the task should continue until you decide to stop it.
+                </p>
+                {errors.recurrenceEndDate && (
+                  <p className="text-sm text-red-500">{errors.recurrenceEndDate.message}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
+        {!watchedHasRecurrence && (
+          <div className="space-y-2">
+            <Label>Due Date *</Label>
+            <Popover open={dueDateOpen} onOpenChange={setDueDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal',
+                    !watchedDueDate && 'text-muted-foreground',
+                    errors.dueDate && 'border-red-500'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {watchedDueDate ? format(watchedDueDate, 'PPP') : 'Pick a date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={watchedDueDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setValue('dueDate', date);
+                      setDueDateOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-sm text-muted-foreground">
+              Choose the date you want to be reminded to do the work. If the work already happened and you only want a record, use a note instead.
+            </p>
+            {errors.dueDate && <p className="text-sm text-red-500">{errors.dueDate.message}</p>}
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Priority</Label>
@@ -353,84 +536,6 @@ export function TaskForm({
             <p className="text-sm text-muted-foreground">
               Attach to a plant when the task is specific to one plant rather than the whole space.
             </p>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="hasRecurrence"
-              checked={watchedHasRecurrence}
-              onChange={(e) => setValue('hasRecurrence', e.target.checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="hasRecurrence">Recurring Task</Label>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Turn this on for repeatable maintenance like feeding, inspections, or other routine care.
-          </p>
-
-          {watchedHasRecurrence && (
-            <div className="space-y-4 border-l-2 border-gray-200 pl-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Repeat Every</Label>
-                  <div className="flex space-x-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      max="365"
-                      {...register('recurrenceInterval', { valueAsNumber: true })}
-                      className="w-20"
-                    />
-                    <Select
-                      value={watch('recurrenceType')}
-                      onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setValue('recurrenceType', value)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Day(s)</SelectItem>
-                        <SelectItem value="weekly">Week(s)</SelectItem>
-                        <SelectItem value="monthly">Month(s)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Date (Optional)</Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn('w-full justify-start text-left font-normal', !watchedEndDate && 'text-muted-foreground')}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {watchedEndDate ? format(watchedEndDate, 'PPP') : 'No end date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={watchedEndDate}
-                      onSelect={(date) => {
-                        setValue('recurrenceEndDate', date);
-                        setEndDateOpen(false);
-                      }}
-                      disabled={(date) => date < watchedDueDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <p className="text-sm text-muted-foreground">
-                  Leave this empty if the task should continue until you decide to stop it.
-                </p>
-              </div>
-            </div>
           )}
         </div>
 

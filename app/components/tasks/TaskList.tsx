@@ -15,6 +15,11 @@ import { FeatureHelpPopover } from '../shared/FeatureHelpPopover';
 import type { Task, GrowSpace, Plant, TaskPriority } from '../../lib/types';
 import { cn } from '../../lib/utils';
 import { formatPlantDisplayName } from '../../lib/utils/plantDisplay';
+import {
+  isTaskDueSoon,
+  isTaskNeedsAttention,
+  isTaskOverdue,
+} from '../../lib/utils/taskStatus';
 
 interface TaskListProps {
   tasks: Task[];
@@ -104,12 +109,7 @@ export function TaskList({
       );
     }
 
-    // Time windows used by tab filters
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const dueSoonWindowEnd = new Date(startOfToday);
-    dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
+    const referenceDate = new Date();
 
     // Tab filter
     switch (filterTab) {
@@ -117,24 +117,15 @@ export function TaskList({
         filtered = filtered.filter((task) => task.status === 'pending');
         break;
       case 'issues':
-        filtered = filtered.filter(
-          (task) =>
-            task.status === 'pending' &&
-            (task.priority === 'high' || task.dueDate < startOfToday)
+        filtered = filtered.filter((task) =>
+          isTaskNeedsAttention(task, referenceDate)
         );
         break;
       case 'dueSoon':
-        filtered = filtered.filter(
-          (task) =>
-            task.status === 'pending' &&
-            task.dueDate >= startOfToday &&
-            task.dueDate <= dueSoonWindowEnd
-        );
+        filtered = filtered.filter((task) => isTaskDueSoon(task, referenceDate));
         break;
       case 'overdue':
-        filtered = filtered.filter(
-          (task) => task.status === 'pending' && task.dueDate < startOfToday
-        );
+        filtered = filtered.filter((task) => isTaskOverdue(task, referenceDate));
         break;
       case 'completed':
         filtered = filtered.filter((task) => task.status === 'completed');
@@ -266,29 +257,15 @@ export function TaskList({
 
   // Calculate counts for tabs
   const taskCounts = useMemo(() => {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const dueSoonWindowEnd = new Date(startOfToday);
-    dueSoonWindowEnd.setDate(dueSoonWindowEnd.getDate() + 1);
+    const referenceDate = new Date();
 
     return {
       all: tasks.length,
       pending: tasks.filter((task) => task.status === 'pending').length,
-      issues: tasks.filter(
-        (task) =>
-          task.status === 'pending' &&
-          (task.priority === 'high' || task.dueDate < startOfToday)
-      ).length,
-      dueSoon: tasks.filter(
-        (task) =>
-          task.status === 'pending' &&
-          task.dueDate >= startOfToday &&
-          task.dueDate <= dueSoonWindowEnd
-      ).length,
-      overdue: tasks.filter(
-        (task) => task.status === 'pending' && task.dueDate < startOfToday
-      ).length,
+      issues: tasks.filter((task) => isTaskNeedsAttention(task, referenceDate))
+        .length,
+      dueSoon: tasks.filter((task) => isTaskDueSoon(task, referenceDate)).length,
+      overdue: tasks.filter((task) => isTaskOverdue(task, referenceDate)).length,
       completed: tasks.filter((task) => task.status === 'completed').length,
     };
   }, [tasks]);
@@ -548,7 +525,6 @@ export function TaskList({
     </div>
   );
 }
-
 
 
 

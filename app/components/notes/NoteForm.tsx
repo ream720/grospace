@@ -18,7 +18,15 @@ import { formatPlantDisplayName } from '../../lib/utils/plantDisplay';
 
 const noteFormSchema = z.object({
   content: z.string().min(1, 'Content is required').max(2000, 'Content must be less than 2000 characters'),
-  category: z.enum(['observation', 'feeding', 'pruning', 'issue', 'milestone', 'general'] as const),
+  category: z.enum([
+    'observation',
+    'feeding',
+    'pruning',
+    'issue',
+    'milestone',
+    'recurringTask',
+    'general',
+  ] as const),
   plantId: z.string().optional(),
   spaceId: z.string().optional(),
   timestamp: z.string().optional(),
@@ -55,6 +63,7 @@ const noteCategoryDescriptions: Record<NoteCategory, string> = {
   pruning: 'Use for pruning, trimming, training, defoliation, or other structure changes.',
   issue: 'Use for pests, disease, deficiencies, damage, or anything that needs troubleshooting history.',
   milestone: 'Use for major moments like germination, transplanting, flowering, or harvest progress.',
+  recurringTask: 'Use when logging completion details from a recurring task occurrence.',
   general: 'Use when the update matters but does not fit neatly into the other categories.',
 };
 

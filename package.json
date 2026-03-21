@@ -19,9 +19,12 @@
     "test:e2e:emulator:ui": "PW_USE_FIREBASE_EMULATOR=true playwright test --ui",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "test:e2e:seed-smoke": "PW_RUN_SEED_SMOKE=true playwright test e2e/seed-account-smoke.spec.ts",
     "emulators:start:test": "node scripts/start-firebase-emulators.mjs",
     "emulators:seed:test": "node scripts/seed-firebase-emulator.mjs",
-    "test:e2e:bootstrap": "node scripts/seed-firebase-emulator.mjs"
+    "test:e2e:bootstrap": "node scripts/seed-firebase-emulator.mjs",
+    "seed:account": "node scripts/seed-firebase-account.mjs",
+    "seed:account:dry": "node scripts/seed-firebase-account.mjs --dry-run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

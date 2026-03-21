@@ -33,6 +33,7 @@ interface TaskCompletionDialogProps {
   spaces: GrowSpace[];
   plants: Plant[];
   open: boolean;
+  defaultNoteCategory?: NoteCategory;
   onOpenChange: (open: boolean) => void;
   onComplete: (
     taskId: string,
@@ -79,12 +80,20 @@ export function TaskCompletionDialog({
   spaces,
   plants,
   open,
+  defaultNoteCategory,
   onOpenChange,
   onComplete,
 }: TaskCompletionDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultCreateNote = useMemo(() => Boolean(task?.plantId || task?.spaceId), [task]);
+  const resolvedDefaultCategory: NoteCategory = useMemo(() => {
+    if (!task) {
+      return defaultNoteCategory || 'milestone';
+    }
+
+    return defaultNoteCategory || getSuggestedNoteCategory(task);
+  }, [defaultNoteCategory, task]);
 
   const {
     register,
@@ -97,7 +106,7 @@ export function TaskCompletionDialog({
     defaultValues: {
       createNote: defaultCreateNote,
       noteContent: task ? buildSuggestedNoteContent(task) : '',
-      noteCategory: task ? getSuggestedNoteCategory(task) : 'milestone',
+      noteCategory: resolvedDefaultCategory,
     },
   });
 
@@ -109,9 +118,9 @@ export function TaskCompletionDialog({
     reset({
       createNote: Boolean(task.plantId || task.spaceId),
       noteContent: buildSuggestedNoteContent(task),
-      noteCategory: getSuggestedNoteCategory(task),
+      noteCategory: resolvedDefaultCategory,
     });
-  }, [task, open, reset]);
+  }, [resolvedDefaultCategory, task, open, reset]);
 
   const watchCreateNote = watch('createNote');
 
@@ -129,7 +138,7 @@ export function TaskCompletionDialog({
       if (data.createNote) {
         noteData = {
           content: data.noteContent?.trim() || buildSuggestedNoteContent(task),
-          category: data.noteCategory || getSuggestedNoteCategory(task),
+          category: data.noteCategory || resolvedDefaultCategory,
           plantId: task.plantId,
           spaceId: task.spaceId,
         };
@@ -229,6 +238,7 @@ export function TaskCompletionDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="milestone">Milestone</SelectItem>
+                      <SelectItem value="recurringTask">Recurring Task</SelectItem>
                       <SelectItem value="observation">Observation</SelectItem>
                       <SelectItem value="feeding">Feeding</SelectItem>
                       <SelectItem value="pruning">Pruning</SelectItem>
@@ -269,4 +279,3 @@ export function TaskCompletionDialog({
     </Dialog>
   );
 }
-

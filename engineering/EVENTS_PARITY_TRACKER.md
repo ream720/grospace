@@ -51,6 +51,11 @@ Track follow-up work needed to fully restore Notes + Tasks behavior after consol
 
 ## Change Log
 
+- 2026-03-17: Recurring task tracking + Issues criteria refinement:
+  - added recurring task series metadata (`recurrenceSeriesId`, occurrence index, start date) to support completion tracking across instances
+  - added task-details recurring completion log (occurrence checklist through recurrence end date)
+  - refined `Issues` criteria to overdue pending tasks plus high-priority tasks due within the next 24 hours
+  - aligned `Due Soon` helper copy with next-24-hours behavior
 - 2026-03-14: Completed Events parity audit and closure pass:
   - functional Notes/Tasks parity is complete for MVP scope in `/events`
   - moved task action parity follow-up out of active Events parity closure and into post-MVP backlog tracking

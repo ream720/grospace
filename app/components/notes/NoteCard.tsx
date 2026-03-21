@@ -37,8 +37,17 @@ export function NoteCard({
       case 'pruning': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
       case 'issue': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'milestone': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'recurringTask': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    if (category === 'recurringTask') {
+      return 'Recurring Task';
+    }
+
+    return category.charAt(0).toUpperCase() + category.slice(1);
   };
 
   const handleImageClick = (imageUrl: string) => {
@@ -61,7 +70,7 @@ export function NoteCard({
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={getCategoryColor(note.category)}>
-                  {note.category.charAt(0).toUpperCase() + note.category.slice(1)}
+                  {getCategoryLabel(note.category)}
                 </Badge>
                 
                 {spaceName && (

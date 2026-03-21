@@ -1,10 +1,10 @@
 # Grospace E2E Test Suite
 
-Last updated: March 16, 2026
+Last updated: March 17, 2026
 
 ## Status
 
-- Suite size: **87 tests across 11 spec files**.
+- Suite size: **88 tests across 12 spec files** (includes opt-in seeded-account smoke spec).
 - Framework: [Playwright](https://playwright.dev/) (Chromium).
 - Route model: Notes/Tasks coverage now validates the consolidated `/events` workflow.
 - Auth model: Playwright global auth bootstrap + storage-state reuse is enabled via `e2e/global-setup.ts`.
@@ -30,6 +30,9 @@ npm run test:e2e:emulator:ui
 # One-off utilities
 npm run emulators:start:test
 npm run emulators:seed:test
+npm run seed:account:dry
+npm run seed:account
+npm run test:e2e:seed-smoke
 npx playwright test --list
 ```
 
@@ -67,6 +70,43 @@ Fallback values if `PW_*` vars are not set:
 - Seeding script resets auth + firestore and creates:
   - deterministic test user
   - baseline seeded space for note/task flows
+
+### Cloud append-only seeded account mode (manual UI dataset fill)
+
+- Use this mode when you want realistic-looking data in a dedicated test account.
+- The account seeder is append-only and **does not delete existing records**.
+- It uses:
+  - `VITE_FIREBASE_LOGIN_USER`
+  - `VITE_FIREBASE_LOGIN_PW`
+- Supported dataset sizes:
+  - `light`: 2 spaces, 8 plants, 20 notes, 15 tasks
+  - `medium` (default): 4 spaces, 20 plants, 60 notes, 40 tasks
+  - `heavy`: 8 spaces, 60 plants, 180 notes, 120 tasks
+- Every seeded document includes metadata:
+  - `seedBatchId`
+  - `seedRecordSource`
+  - `seededAt`
+
+Recommended one-off flow:
+
+```bash
+# Preview only (no network writes)
+npm run seed:account:dry
+
+# Append a realistic medium dataset
+npm run seed:account
+
+# Optional: change volume
+node scripts/seed-firebase-account.mjs --size=heavy
+
+# Verify seeded UI shape with the opt-in smoke spec
+npm run test:e2e:seed-smoke
+```
+
+Notes:
+
+- `test:e2e:seed-smoke` is opt-in and does not affect default release-gate runs.
+- For optional cleanup later, filter by `seedBatchId` in Firestore and remove that batch's docs.
 
 ## Current Coverage Snapshot
 

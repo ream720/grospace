@@ -11,7 +11,14 @@ export interface Note {
   updatedAt: Date;
 }
 
-export type NoteCategory = 'observation' | 'feeding' | 'pruning' | 'issue' | 'milestone' | 'general';
+export type NoteCategory =
+  | 'observation'
+  | 'feeding'
+  | 'pruning'
+  | 'issue'
+  | 'milestone'
+  | 'recurringTask'
+  | 'general';
 
 export interface CreateNoteData {
   plantId?: string;
@@ -46,5 +53,6 @@ export const NOTE_CATEGORIES: { value: NoteCategory; label: string }[] = [
   { value: 'pruning', label: 'Pruning' },
   { value: 'issue', label: 'Issue' },
   { value: 'milestone', label: 'Milestone' },
+  { value: 'recurringTask', label: 'Recurring Task' },
   { value: 'general', label: 'General' },
 ];

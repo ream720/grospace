@@ -46,7 +46,7 @@ const SPACE_NAMES = [
 
 const SPACE_TYPES: SpaceType[] = ['indoor-tent', 'outdoor-bed', 'greenhouse', 'hydroponic', 'container'];
 
-const NOTE_CONTENTS = {
+const NOTE_CONTENTS: Record<NoteCategory, string[]> = {
   observation: [
     'Plant looking healthy, new growth visible',
     'Leaves showing slight yellowing at tips',
@@ -81,6 +81,13 @@ const NOTE_CONTENTS = {
     'Week 1 of flower complete',
     'Harvest day! Cut and hung to dry',
     'Curing complete, final weight logged'
+  ],
+  recurringTask: [
+    'Completed scheduled recurring care item.',
+    'Recurring task finished on schedule.',
+    'Closed recurring maintenance step for today.',
+    'Recurring checklist item completed successfully.',
+    'Logged completion for this recurring occurrence.'
   ],
   general: [
     'Reorganized tent layout',
@@ -167,7 +174,15 @@ export function generateMockData(userId: string): MockDataResult {
 
   // Generate notes for plants (2-5 per plant)
   const notes: Note[] = [];
-  const noteCategories: NoteCategory[] = ['observation', 'feeding', 'pruning', 'issue', 'milestone', 'general'];
+  const noteCategories: NoteCategory[] = [
+    'observation',
+    'feeding',
+    'pruning',
+    'issue',
+    'milestone',
+    'recurringTask',
+    'general',
+  ];
 
   plants.forEach(plant => {
     const numNotes = 2 + Math.floor(Math.random() * 4);

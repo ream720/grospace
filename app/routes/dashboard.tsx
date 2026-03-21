@@ -10,7 +10,7 @@ import {
   StickyNote,
   ShoppingBasket,
 } from 'lucide-react';
-import { format, isAfter, differenceInDays } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import type { Route } from './+types/dashboard';
 import type { Task } from '~/lib/types';
 import type { NoteCategory } from '~/lib/types/note';
@@ -25,6 +25,7 @@ import { DashboardLayout } from '~/components/dashboard/DashboardLayout';
 import { PlantStageDistribution } from '~/components/dashboard/PlantStageDistribution';
 import { TaskCompletionDialog } from '~/components/tasks/TaskCompletionDialog';
 import { activityService } from '~/lib/services/activityService';
+import { isTaskDueSoon, isTaskNeedsAttention } from '~/lib/utils/taskStatus';
 import { cn } from '~/lib/utils';
 
 // Forms for Quick Action modals
@@ -206,14 +207,10 @@ function DashboardContent() {
   ).length;
   const harvestedPlants = scopedPlants.filter((plant) => plant.status === 'harvested').length;
 
-  // "Open Issues" / High Priority or Overdue Pending Tasks
+  // "Open Issues" / Overdue pending tasks + high-priority tasks due in next 24h
   const openIssueTasks = useMemo(() => {
     const now = new Date();
-    return scopedTasks.filter(
-      (task) =>
-        task.status === 'pending' &&
-        (task.priority === 'high' || isAfter(now, new Date(task.dueDate)))
-    );
+    return scopedTasks.filter((task) => isTaskNeedsAttention(task, now));
   }, [scopedTasks]);
 
   const openIssuesCount = useMemo(
@@ -222,18 +219,10 @@ function DashboardContent() {
   );
 
   // Tasks Due (Next 24 Hours)
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const endOfWindow = new Date(startOfToday);
-  endOfWindow.setDate(endOfWindow.getDate() + 1);
-  const tasksDueSoon = scopedTasks.filter((task) => {
-    if (task.status !== 'pending') {
-      return false;
-    }
-
-    const dueDate = new Date(task.dueDate);
-    return dueDate >= startOfToday && dueDate <= endOfWindow;
-  });
+  const tasksDueSoon = useMemo(() => {
+    const now = new Date();
+    return scopedTasks.filter((task) => isTaskDueSoon(task, now));
+  }, [scopedTasks]);
 
   // Recent Activity with Description
   const activities = useMemo(() => {
@@ -586,7 +575,7 @@ function DashboardContent() {
             </div>
           </Link>
 
-          {/* Open Issues (High Priority + Overdue Pending Tasks) */}
+          {/* Open Issues (Overdue + high-priority due in next 24h) */}
           <Link
             to="/events?type=tasks&taskStatus=issues"
             className={statTileClassName}

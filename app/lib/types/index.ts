@@ -84,7 +84,14 @@ export interface Plant extends FirestoreDocument {
 }
 
 // Note types
-export type NoteCategory = 'observation' | 'feeding' | 'pruning' | 'issue' | 'milestone' | 'general';
+export type NoteCategory =
+  | 'observation'
+  | 'feeding'
+  | 'pruning'
+  | 'issue'
+  | 'milestone'
+  | 'recurringTask'
+  | 'general';
 
 export interface Note extends FirestoreDocument {
   userId: string;
@@ -110,6 +117,9 @@ export interface Task extends FirestoreDocument {
   priority: TaskPriority;
   status: TaskStatus;
   recurrence?: RecurrenceSettings;
+  recurrenceSeriesId?: string;
+  recurrenceOccurrence?: number;
+  recurrenceStartDate?: Date;
   completedAt?: Date;
 }
 
