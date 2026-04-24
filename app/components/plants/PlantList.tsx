@@ -150,9 +150,9 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
   return (
     <div className="space-y-4" data-testid="e2e-plants-list">
       {/* Header with filters and add button */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-2 flex-1">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row">
+          <div className="relative w-full sm:max-w-sm sm:flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search plants..."
@@ -181,7 +181,11 @@ export function PlantList({ spaceId, spaces, showAddButton = true }: PlantListPr
           </Select>
         </div>
         {showAddButton && (
-          <Button onClick={() => setShowAddDialog(true)} data-testid="e2e-plants-add-button">
+          <Button
+            onClick={() => setShowAddDialog(true)}
+            className="w-full sm:w-auto"
+            data-testid="e2e-plants-add-button"
+          >
             <Sprout className="mr-2 h-4 w-4" />
             Add Plant
           </Button>

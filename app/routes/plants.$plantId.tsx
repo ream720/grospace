@@ -234,7 +234,7 @@ function PlantDetailPageContent() {
   }
 
   return (
-    <div className="container mx-auto space-y-8 px-4 py-8">
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-8">
       <PlantDetails
         plant={plant}
         spaces={spaces}
@@ -252,13 +252,14 @@ function PlantDetailPageContent() {
           </div>
 
           <div
-            className="inline-flex gap-2 rounded-lg border bg-background p-1 lg:hidden"
+            className="flex w-full items-center gap-2 rounded-lg border bg-background p-1 lg:hidden"
             data-testid="e2e-plant-detail-section-switcher"
           >
             <Button
               type="button"
               size="sm"
               variant={mobileSection === 'tasks' ? 'default' : 'ghost'}
+              className="flex-1"
               data-testid="e2e-plant-detail-show-tasks"
               onClick={() => setMobileSection('tasks')}
             >
@@ -268,6 +269,7 @@ function PlantDetailPageContent() {
               type="button"
               size="sm"
               variant={mobileSection === 'notes' ? 'default' : 'ghost'}
+              className="flex-1"
               data-testid="e2e-plant-detail-show-notes"
               onClick={() => setMobileSection('notes')}
             >
@@ -283,7 +285,7 @@ function PlantDetailPageContent() {
           >
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-xl font-semibold">
-                Plant Tasks
+                Tasks in this Plant
                 <Badge variant="outline" className="ml-2 font-normal">
                   {plantTasks.length}
                 </Badge>
@@ -335,7 +337,7 @@ function PlantDetailPageContent() {
           >
             <NoteList
               plantId={plant.id}
-              title="Plant Notes"
+              title="Notes in this Plant"
               showCreateButton={true}
               showDescription={false}
             />

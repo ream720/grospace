@@ -263,43 +263,41 @@ function SpaceDetailContent() {
       </div>
 
       {/* Header Content */}
-      <div className="mb-8">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">{space.name}</h1>
+      <div className="mb-8 space-y-4">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">{space.name}</h1>
 
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Badge variant="secondary" className="font-medium">
-                {spaceTypeLabels[space.type]}
-              </Badge>
-              <span className="text-sm">|</span>
-              <span className="text-sm font-medium">
-                {space.plantCount} {space.plantCount === 1 ? 'plant' : 'plants'}
-              </span>
-            </div>
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Badge variant="secondary" className="font-medium">
+              {spaceTypeLabels[space.type]}
+            </Badge>
+            <span className="text-sm">|</span>
+            <span className="text-sm font-medium">
+              {space.plantCount} {space.plantCount === 1 ? 'plant' : 'plants'}
+            </span>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setShowAddPlantDialog(true)}>
-                  <Sprout className="mr-2 h-4 w-4" />
-                  Add Plant
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        <div className="flex flex-wrap gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setShowAddPlantDialog(true)}>
+                <Sprout className="mr-2 h-4 w-4" />
+                Add Plant
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-            <Button onClick={() => setShowEditDialog(true)} variant="outline">
-              <Settings className="mr-2 h-4 w-4" />
-              Edit Space
-            </Button>
-          </div>
+          <Button onClick={() => setShowEditDialog(true)} variant="outline">
+            <Settings className="mr-2 h-4 w-4" />
+            Edit Space
+          </Button>
         </div>
 
         {space.description && (
@@ -389,17 +387,18 @@ function SpaceDetailContent() {
           <div>
             <h2 className="text-2xl font-bold">Space Workspace</h2>
             <p className="text-sm text-muted-foreground">
-              Track space-level work and contextual notes side by side.
+              Keep space-specific tasks and notes in one focused view.
             </p>
           </div>
           <div
-            className="inline-flex gap-2 rounded-lg border bg-background p-1 lg:hidden"
+            className="flex w-full items-center gap-2 rounded-lg border bg-background p-1 lg:hidden"
             data-testid="e2e-space-detail-section-switcher"
           >
             <Button
               type="button"
               size="sm"
               variant={mobileSection === 'tasks' ? 'default' : 'ghost'}
+              className="flex-1"
               data-testid="e2e-space-detail-show-tasks"
               onClick={() => setMobileSection('tasks')}
             >
@@ -409,6 +408,7 @@ function SpaceDetailContent() {
               type="button"
               size="sm"
               variant={mobileSection === 'notes' ? 'default' : 'ghost'}
+              className="flex-1"
               data-testid="e2e-space-detail-show-notes"
               onClick={() => setMobileSection('notes')}
             >
@@ -474,7 +474,7 @@ function SpaceDetailContent() {
           >
             <NoteList
               spaceId={space.id}
-              title="Space Notes and Observations"
+              title="Notes in this Space"
               showCreateButton={true}
               showDescription={false}
             />
