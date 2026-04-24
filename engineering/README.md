@@ -13,6 +13,7 @@ This folder is the canonical home for engineering planning and launch-readiness 
 - MVP product backlog: [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md)
 - Test gates backlog: [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md)
 - Monetization backlog: [`MONETIZATION_BACKLOG.md`](./MONETIZATION_BACKLOG.md)
+- Soft launch checklist (May 1, 2026): [`SOFT_LAUNCH_CHECKLIST_2026-05-01.md`](./SOFT_LAUNCH_CHECKLIST_2026-05-01.md)
 - Completed work archive: [`archive/COMPLETED_BACKLOG_2026_Q1.md`](./archive/COMPLETED_BACKLOG_2026_Q1.md)
 
 ## Legacy Planning Docs (Moved From Repo Root)

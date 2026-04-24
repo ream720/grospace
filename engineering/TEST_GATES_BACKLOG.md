@@ -1,19 +1,21 @@
 # Test Gates Backlog
 
-Last updated: March 25, 2026 (phase-3 migration finalize + E2E stabilization pass)
+Last updated: April 21, 2026 (soft-launch gate refresh + local full-run revalidation)
 
 ## Events Refactor Test Alignment
 
 - [ ] Keep Events route unit/e2e assertions current as `/events` UX evolves.
+- [x] Align navigation coverage to hard-cut behavior: legacy `/notes` and `/tasks` now assert 404 outcomes.
 
 ## Release Gates (Pre-Invite / Pre-Launch)
 
 - [x] Firebase Auth audit: inventory app + test auth flows, verify provider/rules/session assumptions, and document quota risk points with mitigations.
 - [x] Firestore phase-2 model finalization in cloud project (`grospace-d7a36`): finalize dry-run, finalize write, and verify run completed with `mismatches=0`.
-- [x] E2E auth stability: full local emulator-backed validation completed with zero failures (`87 passed`, `1 skipped`) after selector + onboarding stabilization.
+- [x] E2E auth stability: full local emulator-backed validation completed with zero failures (`91 passed`, `1 skipped`) after selector + onboarding stabilization.
 - [x] Shakedown runbook: logged `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, `npm run test:rules`, and full `npm run test:e2e` evidence in [`PREINVITE_SHAKEDOWN.md`](./PREINVITE_SHAKEDOWN.md).
-  - Local status (2026-03-25): full gate set passed in emulator mode.
-  - Pending gate evidence: CI command artifacts + final invite-wave sign-off.
+  - Local status (2026-04-21): full gate set passed in emulator mode on branch `codex/mvp-events-notes-tasks-hardcut-split` (HEAD `218a92d`).
+  - Pending gate evidence: CI/release-runner command artifacts + final soft-launch sign-off.
+- [ ] Capture CI/release-runner gate evidence for the launch-candidate commit (`npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, `npm run test:rules`, `npm run test:e2e`) with artifact links + commit SHA.
 
 ## High-Priority MVP Coverage Gaps
 
@@ -46,7 +48,9 @@ Last updated: March 25, 2026 (phase-3 migration finalize + E2E stabilization pas
 - [x] Dashboard task-query stabilization: removed index-heavy default ordering and sorted task lists client-side for startup resilience.
 - [x] Phase-3 Firestore finalize execution logged (`finalize:dry`, `finalize`, `verify`) with `mismatches=0`.
 - [x] Phase-3 E2E selector-contract stabilization across Dashboard/Events/Nav/Profile/Settings/Plants/Spaces plus onboarding-aware helpers.
-- [x] Full emulator-backed Playwright gate green (`npm run test:e2e`: `87 passed`, `1 skipped`, `0 failed`).
+- [x] Full emulator-backed Playwright gate green (`npm run test:e2e`: `91 passed`, `1 skipped`, `0 failed`).
+- [x] Legacy route hard-cut assertions in navigation E2E (`/notes`, `/tasks` => 404).
+- [x] Plants/Spaces split-pane detail coverage added in E2E (`e2e/plants.spec.ts`, `e2e/spaces.spec.ts`).
 
 ## Additional Test Backlog
 

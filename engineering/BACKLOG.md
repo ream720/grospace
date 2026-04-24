@@ -1,34 +1,41 @@
 # Engineering Backlog Index
 
-Last updated: March 25, 2026 (phase-3 migration finalize + full gate pass)
+Last updated: April 24, 2026 (manual QA findings sync)
 
 Use this file as the control-plane backlog. Detailed work lives in focused docs linked below.
 
 ## Now
 
-- [x] Run Firebase Auth audit and capture quota-risk mitigations in release docs. See [`FIREBASE_AUTH_AUDIT.md`](./FIREBASE_AUTH_AUDIT.md).
-- [x] Run pre-invite shakedown with gate command log, including full emulator-backed Playwright runs. See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md) and [`PREINVITE_SHAKEDOWN.md`](./PREINVITE_SHAKEDOWN.md).
-- [x] Complete remaining MVP E2E coverage gaps (note photos, profile/settings, auth edge cases, resilience/responsive smoke). See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
-- [x] Finalize Firestore phase-2 model in cloud (`users/{uid}/...` only) and complete migration verification. See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
+- [ ] Lock May 1, 2026 soft-launch scope and complete checklist execution (`Free` tier public, Premium deferred). See [`SOFT_LAUNCH_CHECKLIST_2026-05-01.md`](./SOFT_LAUNCH_CHECKLIST_2026-05-01.md).
+- [ ] Close remaining `/events` hardening risks: dedupe task-filter predicates, add recurring occurrence in-flight guard, and add parity regression tests.
+- [ ] Capture release evidence on the launch-candidate commit (local + CI artifacts) in [`PREINVITE_SHAKEDOWN.md`](./PREINVITE_SHAKEDOWN.md).
 
 Recent milestone (completed):
 
+- [x] `/events` hard-cut shipped on 2026-04-16 (`app/routes/notes.tsx` and `app/routes/tasks.tsx` removed).
+- [x] Legacy route decision confirmed on 2026-04-24 QA pass: keep `/notes` + `/tasks` as 404 (no redirect restoration planned for soft launch).
+- [x] Plants/Spaces detail pages reworked to split Tasks/Notes workspaces with mobile section switchers.
+- [x] Local gate set re-validated on 2026-04-21: `npm run typecheck`, `npm run lint`, `npm run test` (`268`), `npm run build`, `npm run test:rules`, and `npm run test:e2e` (`91 passed`, `1 skipped`, `0 failed`).
+- [x] Manual QA round (2026-04-24): onboarding continuity validated, Events CRUD validated, and recurring duplicate attempts did not reproduce duplicate completions.
+- [x] Profile/settings/session manual smoke checks confirmed good (2026-04-24 follow-up).
 - [x] Emulator-first E2E workflow stabilized (startup/seed/auth bootstrap path) and documented in [`E2E_EMULATOR_RUNBOOK.md`](./E2E_EMULATOR_RUNBOOK.md).
 - [x] Phase-3 release-gate stabilization completed: migration finalize+verify and full emulator-backed Playwright suite green.
 
 ## Next
 
-- [ ] Notes backward-compatibility cleanup to align with cleaner Tasks query model. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
-- [ ] Define implementation plan for Plants/Spaces Notes/Tasks split-layout rework. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
-- [ ] Visually align Notes and Tasks layouts for consistent field placement and flow. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
+- [ ] Optional UX refinements to guided walkthrough copy/ordering after soft-launch feedback. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
+- [ ] Improve onboarding flow continuity so guided setup can stay in-context through multi-step setup actions. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
+- [ ] Events filter UX clarity polish for improved user comprehension (labels, grouping, and affordance clarity). See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
+- [ ] Mobile UI polish pass for Plant/Space detail split-workspace layouts. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
 - [ ] Post-MVP lint hardening (`react/no-unescaped-entities` re-enable + escape cleanup). See [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).
+- [ ] Plan incremental `/events` decomposition after gate-critical fixes (URL filter codec/state transitions, component extraction, reducer-oriented controller state). See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
 
-Events focused-pass findings (March 21, 2026):
+Events focused-pass findings (updated April 21, 2026):
 
 - [ ] Deduplicate Events task-filter predicates to remove drift risk between list filtering and status counts; add parity tests for context/scope/status/priority combinations. Primary touchpoint: `app/routes/events.tsx`.
 - [ ] Add an in-flight guard around recurring occurrence selection/completion flows to prevent duplicate create/completion paths under rapid interaction. Primary touchpoints: `app/routes/events.tsx`, `app/lib/services/taskService.ts`.
-- [ ] Expand Events route test coverage for currently weak paths: Notes CRUD dialogs, Notes/Tasks view-toggle URL sync, mobile details sheet behavior, photo modal open/close, and cleanup effect assertions. Primary touchpoint: `app/test/routes/events.test.tsx`.
-- [ ] Plan incremental Events decomposition after gate-critical fixes: extract URL filter codec/state transitions, split filter/list panes into components, and move controller logic toward reducer-driven state handling.
+- [ ] Expand Events route test coverage for remaining weak paths: Notes CRUD dialogs, Notes/Tasks view-toggle URL sync, mobile details sheet behavior, photo modal open/close, and cleanup effect assertions. Primary touchpoint: `app/test/routes/events.test.tsx`.
+- [ ] Audit public-facing links/help copy for removed `/notes` and `/tasks` routes and add dedicated `/events` handoff messaging where needed.
 
 Recently completed (March 16, 2026):
 
@@ -40,13 +47,14 @@ Recently completed (March 16, 2026):
 
 ## Later
 
-- [ ] Monetization foundation and billing rollout. See [`MONETIZATION_BACKLOG.md`](./MONETIZATION_BACKLOG.md).
+- [ ] Monetization foundation and billing rollout (Premium hard-launch path). See [`MONETIZATION_BACKLOG.md`](./MONETIZATION_BACKLOG.md).
 - [ ] Timeline and space/plant visualization expansion work. See [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md).
 - [ ] Evaluate long-term Events model direction: notes-first workflow with optional task conversion.
 
 ## Backlog Documents
 
 - MVP launch product work: [`MVP_LAUNCH_BACKLOG.md`](./MVP_LAUNCH_BACKLOG.md)
+- Soft-launch runway checklist: [`SOFT_LAUNCH_CHECKLIST_2026-05-01.md`](./SOFT_LAUNCH_CHECKLIST_2026-05-01.md)
 - Test gates and release readiness: [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md)
 - Monetization roadmap: [`MONETIZATION_BACKLOG.md`](./MONETIZATION_BACKLOG.md)
 - Completed history archive: [`archive/COMPLETED_BACKLOG_2026_Q1.md`](./archive/COMPLETED_BACKLOG_2026_Q1.md)

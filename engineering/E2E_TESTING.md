@@ -1,14 +1,16 @@
 # Grospace E2E Test Suite
 
-Last updated: March 25, 2026
+Last updated: April 21, 2026
 
 ## Status
 
-- Suite size: **88 tests across 12 spec files** (includes opt-in seeded-account smoke spec).
+- Suite size: **92 tests across 12 spec files** (includes opt-in seeded-account smoke spec).
 - Framework: [Playwright](https://playwright.dev/) (Chromium).
 - Route model: Notes/Tasks coverage now validates the consolidated `/events` workflow.
+- Legacy route model: `/notes` and `/tasks` are hard-cut and asserted as 404 paths in navigation specs.
 - Auth model: Playwright global auth bootstrap + storage-state reuse is enabled via `e2e/global-setup.ts`.
 - Emulator model: Firebase emulator seeding is wired via `scripts/seed-firebase-emulator.mjs`.
+- Latest full emulator-backed run (2026-04-21): `91 passed`, `1 skipped`, `0 failed`.
 
 ## Primary Commands
 
@@ -127,19 +129,21 @@ Notes:
 
 - `auth.spec.ts` (9): login/register/reset/auth errors/basic auth flows
 - `auth-edge.spec.ts` (7): duplicate-email, mismatch/short password validation, reset flow, session reload, remember-me interaction, and first-run onboarding visibility for new signups
-- `navigation.spec.ts` (21): public/protected routing, Events IA nav, legacy `/notes` + `/tasks` redirects
+- `navigation.spec.ts` (21): public/protected routing, Events IA nav, legacy `/notes` + `/tasks` 404 assertions
 - `dashboard.spec.ts` (7): dashboard shell/stat cards/section visibility
 - `dashboard-actions.spec.ts` (4): dashboard quick-action create flows + dashboard mark-complete flow
-- `spaces.spec.ts` (5): spaces CRUD basics + space detail navigation
-- `plants.spec.ts` (13): plants CRUD + detail actions + status/move/harvest dialogs
+- `spaces.spec.ts` (7): spaces CRUD basics + space detail navigation + split-pane desktop/mobile checks
+- `plants.spec.ts` (15): plants CRUD + detail actions + split-pane desktop/mobile checks + status/move/harvest dialogs
 - `tasks.spec.ts` (7): Events tasks create/edit/delete/complete/filter + overdue status coverage
 - `notes.spec.ts` (6): Events notes create/edit/delete/filter + note-photo upload coverage
 - `profile-settings.spec.ts` (4): profile and settings smoke/update/theme/sign-out coverage
 - `responsive-resilience.spec.ts` (4): offline friendly-error flow + mobile navigation/dashboard/settings smoke
+- `seed-account-smoke.spec.ts` (1): opt-in seeded-account populated-data smoke (`PW_RUN_SEED_SMOKE=true`)
 
 ## Remaining High-Priority Gaps
 
-- Full-run stability validation for the new slices in unrestricted emulator runners (local + CI evidence).
+- CI/release-runner evidence capture for full required gate command set.
+- Keep watch on hard-cut route behavior feedback and adjust tests/docs if redirect behavior is intentionally restored.
 
 ## Execution Caveats
 

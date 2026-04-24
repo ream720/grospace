@@ -1,44 +1,46 @@
 # Pre-Invite Shakedown Log
 
-Last updated: March 25, 2026 (EDT)
+Last updated: April 21, 2026 (EDT)
 
 Gate policy:
 
 - Zero Playwright failures for the full emulator-backed suite.
 - Capture local command evidence with timestamps before invite-wave sign-off.
-- Capture CI evidence before launch sign-off.
+- Capture CI/release-runner evidence before launch sign-off.
 
 ## Command Matrix
 
 | Command | Required | Local Status | CI Status |
 | --- | --- | --- | --- |
-| `npm run typecheck` | Yes | Pass (2026-03-25 22:43 EDT) | Pending |
-| `npm run lint` | Yes | Pass (2026-03-25 22:43 EDT) | Pending |
-| `npm run test` | Yes | Pass (2026-03-25 22:43 EDT) | Pending |
-| `npm run build` | Yes | Pass (2026-03-25 22:43 EDT) | Pending |
-| `npm run test:rules` | Yes | Pass (2026-03-25 22:43 EDT) | Pending |
-| `npm run test:e2e` (full emulator run) | Yes | Pass (`87 passed`, `1 skipped`, `0 failed`; completed 2026-03-25 22:52 EDT) | Pending |
+| `npm run typecheck` | Yes | Pass (2026-04-21 EDT) | Pending |
+| `npm run lint` | Yes | Pass (2026-04-21 EDT) | Pending |
+| `npm run test` | Yes | Pass (`268` tests, 2026-04-21 EDT) | Pending |
+| `npm run build` | Yes | Pass (2026-04-21 EDT) | Pending |
+| `npm run test:rules` | Yes | Pass (2026-04-21 EDT) | Pending |
+| `npm run test:e2e` (full emulator run) | Yes | Pass (`91 passed`, `1 skipped`, `0 failed`; 2026-04-21 EDT) | Pending |
 
 ## Local Run Evidence
 
 Runner context:
 
-- Date: March 25, 2026 (EDT)
+- Date: April 21, 2026 (EDT)
 - Workspace: `garden-assistant`
+- Branch: `codex/mvp-events-notes-tasks-hardcut-split`
+- Commit: `218a92d`
 - Emulator mode: `PW_USE_FIREBASE_EMULATOR=true` (default for `npm run test:e2e`)
 
-### Local command log
+### Local command log (2026-04-21 refresh)
 
-| Time (EDT) | Command | Result | Evidence |
-| --- | --- | --- | --- |
-| 22:43:02 | `npm run typecheck` | Pass | `react-router typegen && tsc` succeeded |
-| 22:43:05 | `npm run lint` | Pass | `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0` succeeded |
-| 22:43:07 | `npm run test` | Pass | Vitest: `28` files, `264` tests passed |
-| 22:43:13 | `npm run build` | Pass | React Router/Vite client+SSR build succeeded |
-| 22:43:15 | `npm run test:rules` | Pass | Phase 2 rules assertions passed (`[rules phase2] all assertions passed`) |
-| 22:43:59 | `npm run test:e2e` | Pass after stabilization rerun | Full suite result: `87 passed`, `1 skipped`, `0 failed`; completed 22:52:18 |
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `npm run typecheck` | Pass | `react-router typegen && tsc` succeeded |
+| `npm run lint` | Pass | `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0` succeeded |
+| `npm run test` | Pass | Vitest: `29` files, `268` tests passed |
+| `npm run build` | Pass | React Router/Vite client+SSR build succeeded |
+| `npm run test:rules` | Pass | Phase 2 rules assertions passed (`[rules phase2] all assertions passed`) |
+| `npm run test:e2e` | Pass | Full suite result: `91 passed`, `1 skipped`, `0 failed` (`92` total tests listed; seeded-account smoke test is opt-in and skipped by default) |
 
-### Migration closeout evidence (cloud project `grospace-d7a36`)
+### Prior migration closeout evidence (March 25, 2026, cloud project `grospace-d7a36`)
 
 Credential context for these commands:
 
@@ -61,9 +63,9 @@ Status: Pending
 
 Required before launch sign-off:
 
-1. Attach CI job links/artifacts for all required commands.
-2. Confirm CI full `npm run test:e2e` pass with zero failures.
-3. Record CI timestamp and commit SHA.
+1. Attach CI/release-runner job links/artifacts for all required commands.
+2. Confirm CI/release full `npm run test:e2e` pass with zero failures.
+3. Record CI timestamp and commit SHA for the launch-candidate build.
 
 ## Open Issues (Must be Empty for Launch-Ready)
 

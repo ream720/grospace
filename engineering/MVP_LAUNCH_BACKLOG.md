@@ -1,12 +1,36 @@
 # MVP Launch Product Backlog
 
-Last updated: March 17, 2026 (post variety-optional + UI backlog additions)
+Last updated: April 24, 2026 (manual QA findings sync)
 
-## Active MVP Product Work
+## Soft Launch Scope (May 1, 2026)
 
-- [ ] Notes backward-compatibility cleanup (remove legacy URL/behavior carryovers and align with newer Tasks patterns).
-- [ ] Rework Plants and Spaces pages to Notes/Tasks split layout (requires detailed implementation plan).
-- [ ] Visually align Notes and Tasks layouts so shared fields follow similar structure and placement.
+- Free tier opens to public.
+- Premium/billing remains deferred to hard launch (track in [`MONETIZATION_BACKLOG.md`](./MONETIZATION_BACKLOG.md)).
+
+## Active MVP Product Work (Pre-Soft-Launch)
+
+- [x] Decide legacy `/notes` and `/tasks` route behavior for launch UX (hard-cut 404 confirmed in Apr 24 manual QA).
+- [ ] Deduplicate `/events` task filtering logic to remove drift between list results and status counts.
+- [ ] Add in-flight guard around recurring occurrence selection/completion to prevent duplicate interaction paths.
+- [ ] Expand `/events` route test coverage for remaining weak paths (Notes CRUD dialogs, view-toggle URL sync, mobile details sheet behavior, photo modal open/close).
+- [x] Run manual UX smoke pass for split Plants/Spaces workspaces (desktop dual-pane + mobile toggles) and capture outcomes in launch notes.
+- [ ] Mobile UI polish pass for Plants/Spaces detail views (functionally correct, minor mobile layout improvements needed).
+- [ ] Events filter UX clarity pass (make filters more explicit and easier to understand).
+
+## Soft Launch Runway Checklist (April 21 -> May 1, 2026)
+
+- [x] Tue Apr 21: refresh docs/backlog and rerun full local gate set.
+- [x] Wed Apr 22: finalize decision on legacy `/notes` + `/tasks` UX and implement chosen behavior.
+- [ ] Thu Apr 23: land `/events` hardening fixes (filter dedupe + recurring in-flight guard).
+- [x] Fri Apr 24: run manual product smoke pass round 1 (auth, onboarding, dashboard, events, plants, spaces).
+- [ ] Sat Apr 25: add/adjust unit + E2E coverage for the hardening changes.
+- [ ] Sat Apr 25: run manual product smoke pass round 2 (retest after hardening changes).
+- [ ] Sun Apr 26: bugfix/polish buffer from smoke findings.
+- [ ] Mon Apr 27: prepare launch-candidate commit and rerun full local gate suite.
+- [ ] Tue Apr 28: capture CI/release-runner evidence and artifact links.
+- [ ] Wed Apr 29: finalize soft-launch support copy, known-issues sheet, and rollback checklist.
+- [ ] Thu Apr 30: run go/no-go review with final gate evidence + open-issue sweep.
+- [ ] Fri May 1: execute soft launch and monitor launch-day signals.
 
 ## MVP Follow-Up / Cleanup
 
@@ -15,6 +39,15 @@ Last updated: March 17, 2026 (post variety-optional + UI backlog additions)
 
 ## Recently Completed
 
+- [x] Manual QA validation on 2026-04-24:
+  - onboarding continuity via `Resume Setup` flow worked through all 3 setup steps
+  - Events notes/tasks CRUD + note photo upload + recurring task flow worked
+  - profile/settings/session smoke checks confirmed good
+  - recurring duplicate attempt did not reproduce duplicates
+  - identified non-blocking follow-up polish: filter clarity and small mobile UI tweaks on plant/space detail views
+- [x] Reworked Plants and Spaces detail pages into split Tasks/Notes layouts (desktop dual-pane + mobile section switcher).
+- [x] Removed legacy `/notes` and `/tasks` route modules as part of `/events` hard-cut (route behavior now 404 unless reintroduced intentionally).
+- [x] Expanded E2E coverage for plant/space split-pane behaviors and legacy route 404 assertions.
 - [x] Locked MVP dashboard stat tiles to `Active Plants`, `Open Issues`, `Tasks Due`, `Total Harvests`.
 - [x] Dashboard recent activity zero-state redesign.
 - [x] Dashboard new-user `Set Up Garden` CTA for empty accounts.
