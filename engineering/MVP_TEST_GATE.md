@@ -26,7 +26,7 @@ This doc is the current gate summary. Historical static-audit details were archi
 
 MVP remains a **launch candidate with explicit caveats**:
 
-1. Keep legacy route behavior locked to 404 for `/notes` + `/tasks` and audit user-facing links/help copy for stale references.
+1. Keep legacy route behavior locked to 404 for `/notes` + `/tasks` (legacy-link/help-copy audit completed on 2026-04-24; no stale in-app route references found).
 2. Run and store full emulator-backed shakedown logs from unrestricted local and CI/release runners (use [`PREINVITE_SHAKEDOWN.md`](./PREINVITE_SHAKEDOWN.md)).
 3. Keep release decisions tied to command-level gate logs on the launch-candidate commit, not historical snapshots.
 

@@ -1,6 +1,6 @@
 # Engineering Backlog Index
 
-Last updated: April 24, 2026 (`/events` wrap-up coverage + monetization readiness sync)
+Last updated: April 24, 2026 (`/events` wrap-up coverage + legacy-link audit sync)
 
 Use this file as the control-plane backlog. Detailed work lives in focused docs linked below.
 
@@ -35,7 +35,7 @@ Events focused-pass findings (updated April 21, 2026):
 - [x] Deduplicate Events task-filter predicates to remove drift risk between list filtering and status counts; add parity tests for context/scope/status/priority combinations. Primary touchpoint: `app/routes/events.tsx`.
 - [x] Add an in-flight guard around recurring occurrence selection/completion flows to prevent duplicate create/completion paths under rapid interaction. Primary touchpoints: `app/routes/events.tsx`, `app/lib/services/taskService.ts`.
 - [x] Expand Events route test coverage for remaining weak paths: Notes CRUD dialogs, Notes/Tasks view-toggle URL sync, mobile details sheet behavior, photo modal open/close, and cleanup effect assertions (completed 2026-04-24). Primary touchpoint: `app/test/routes/events.test.tsx`.
-- [ ] Audit public-facing links/help copy for removed `/notes` and `/tasks` routes and add dedicated `/events` handoff messaging where needed.
+- [x] Audit public-facing links/help copy for removed `/notes` and `/tasks` routes and add dedicated `/events` handoff messaging where needed (completed 2026-04-24; no stale in-app route links found).
 
 Recently completed (March 16, 2026):
 
