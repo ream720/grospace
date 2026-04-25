@@ -1,6 +1,6 @@
 # MVP Launch Product Backlog
 
-Last updated: April 24, 2026 (manual QA + polish follow-up sync)
+Last updated: April 24, 2026 (manual QA + hardening gate rerun sync)
 
 ## Soft Launch Scope (May 1, 2026)
 
@@ -39,6 +39,13 @@ Last updated: April 24, 2026 (manual QA + polish follow-up sync)
 
 ## Recently Completed
 
+- [x] Local hardening gate rerun completed on 2026-04-24:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run test` (`278` passing)
+  - `npm run build`
+  - `npm run test:rules`
+  - `npm run test:e2e` (`91 passed`, `1 skipped`, `0 failed`)
 - [x] Manual QA validation on 2026-04-24:
   - onboarding continuity via `Resume Setup` flow worked through all 3 setup steps
   - Events notes/tasks CRUD + note photo upload + recurring task flow worked

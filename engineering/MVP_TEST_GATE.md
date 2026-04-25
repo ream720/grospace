@@ -14,12 +14,12 @@ This doc is the current gate summary. Historical static-audit details were archi
 
 ## Current Gate Signals
 
-- PASS: `npm run typecheck` (2026-04-21)
-- PASS: `npm run lint` (2026-04-21)
-- PASS: `npm run test` (`268` tests on 2026-04-21)
-- PASS: `npm run build` (2026-04-21)
-- PASS: `npm run test:rules` (2026-04-21)
-- PASS: E2E suite inventory at `92` tests (`12` files); latest full emulator-backed run `91 passed`, `1 skipped`, `0 failed` (2026-04-21).
+- PASS: `npm run typecheck` (2026-04-24)
+- PASS: `npm run lint` (2026-04-24)
+- PASS: `npm run test` (`278` tests on 2026-04-24)
+- PASS: `npm run build` (2026-04-24)
+- PASS: `npm run test:rules` (2026-04-24)
+- PASS: E2E suite inventory at `92` tests (`12` files); latest full emulator-backed run `91 passed`, `1 skipped`, `0 failed` (2026-04-24).
 - PARTIAL: CI/release-runner evidence for the same command set is still required for launch sign-off.
 
 ## Gate Recommendation

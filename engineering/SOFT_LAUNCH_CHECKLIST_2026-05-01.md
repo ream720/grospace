@@ -43,7 +43,7 @@ Ship a stable public soft launch on Friday, May 1, 2026 with Free tier access on
 - [ ] Sat Apr 25: hardening test pass + manual QA round 2
   - [x] add/adjust targeted `/events` unit assertions for hardening changes (completed Apr 24 wrap-up pass)
   - [ ] evaluate any follow-on E2E assertion deltas after QA round 2
-  - run targeted regression set
+  - [x] run targeted regression set (completed Apr 24 local gate rerun: `typecheck`, `lint`, `test`, `build`, `test:rules`, `test:e2e`)
 - [ ] Sun Apr 26: fix + polish buffer
   - close high/medium launch blockers from QA round 1
 - [ ] Mon Apr 27: launch candidate prep

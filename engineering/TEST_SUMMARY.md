@@ -6,16 +6,16 @@ Last updated: April 24, 2026
 
 - PASS: `npm run typecheck`
 - PASS: `npm run lint`
-- PASS: `npm run test` (**268 passing tests**)
+- PASS: `npm run test` (**278 passing tests**)
 - PASS: `npm run build`
 - PASS: `npm run test:rules`
-- PASS: `npm run test:e2e` (`91 passed`, `1 skipped`, `0 failed`; full emulator-backed run on 2026-04-21)
+- PASS: `npm run test:e2e` (`91 passed`, `1 skipped`, `0 failed`; full emulator-backed run on 2026-04-24)
 - PASS: gate artifacts created (`FIREBASE_AUTH_AUDIT.md`, `PREINVITE_SHAKEDOWN.md`)
 - PARTIAL: CI/release-runner command artifacts still need to be attached for final launch sign-off.
 
 ## Unit/Integration Coverage
 
-- Vitest suite total: **268 tests** across services, stores, components, route behavior, and utility layers.
+- Vitest suite total: **278 tests** across services, stores, components, route behavior, and utility layers.
 - Key risk areas covered by automated tests:
   - Date conversion and formatting safety.
   - Firestore payload cleaning and undefined-field guards.
@@ -38,5 +38,4 @@ Current suite footprint:
 ## Remaining Release-Gate Work
 
 - Capture CI/release-runner artifacts for the full required command set on the launch-candidate commit.
-- Audit user-facing links/help copy for legacy `/notes` and `/tasks` references now that hard-cut 404 behavior is final.
 - Keep tracking in [`TEST_GATES_BACKLOG.md`](./TEST_GATES_BACKLOG.md).

@@ -1,6 +1,6 @@
 # Pre-Invite Shakedown Log
 
-Last updated: April 21, 2026 (EDT)
+Last updated: April 24, 2026 (EDT)
 
 Gate policy:
 
@@ -12,30 +12,30 @@ Gate policy:
 
 | Command | Required | Local Status | CI Status |
 | --- | --- | --- | --- |
-| `npm run typecheck` | Yes | Pass (2026-04-21 EDT) | Pending |
-| `npm run lint` | Yes | Pass (2026-04-21 EDT) | Pending |
-| `npm run test` | Yes | Pass (`268` tests, 2026-04-21 EDT) | Pending |
-| `npm run build` | Yes | Pass (2026-04-21 EDT) | Pending |
-| `npm run test:rules` | Yes | Pass (2026-04-21 EDT) | Pending |
-| `npm run test:e2e` (full emulator run) | Yes | Pass (`91 passed`, `1 skipped`, `0 failed`; 2026-04-21 EDT) | Pending |
+| `npm run typecheck` | Yes | Pass (2026-04-24 EDT) | Pending |
+| `npm run lint` | Yes | Pass (2026-04-24 EDT) | Pending |
+| `npm run test` | Yes | Pass (`278` tests, 2026-04-24 EDT) | Pending |
+| `npm run build` | Yes | Pass (2026-04-24 EDT) | Pending |
+| `npm run test:rules` | Yes | Pass (2026-04-24 EDT) | Pending |
+| `npm run test:e2e` (full emulator run) | Yes | Pass (`91 passed`, `1 skipped`, `0 failed`; 2026-04-24 EDT) | Pending |
 
 ## Local Run Evidence
 
 Runner context:
 
-- Date: April 21, 2026 (EDT)
+- Date: April 24, 2026 (EDT)
 - Workspace: `garden-assistant`
 - Branch: `codex/mvp-events-notes-tasks-hardcut-split`
-- Commit: `218a92d`
+- Commit: `2335074`
 - Emulator mode: `PW_USE_FIREBASE_EMULATOR=true` (default for `npm run test:e2e`)
 
-### Local command log (2026-04-21 refresh)
+### Local command log (2026-04-24 hardening refresh)
 
 | Command | Result | Evidence |
 | --- | --- | --- |
 | `npm run typecheck` | Pass | `react-router typegen && tsc` succeeded |
 | `npm run lint` | Pass | `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0` succeeded |
-| `npm run test` | Pass | Vitest: `29` files, `268` tests passed |
+| `npm run test` | Pass | Vitest: `29` files, `278` tests passed |
 | `npm run build` | Pass | React Router/Vite client+SSR build succeeded |
 | `npm run test:rules` | Pass | Phase 2 rules assertions passed (`[rules phase2] all assertions passed`) |
 | `npm run test:e2e` | Pass | Full suite result: `91 passed`, `1 skipped`, `0 failed` (`92` total tests listed; seeded-account smoke test is opt-in and skipped by default) |
