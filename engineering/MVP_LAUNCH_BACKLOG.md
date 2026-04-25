@@ -1,6 +1,6 @@
 # MVP Launch Product Backlog
 
-Last updated: April 24, 2026 (manual QA findings sync)
+Last updated: April 24, 2026 (manual QA + polish follow-up sync)
 
 ## Soft Launch Scope (May 1, 2026)
 
@@ -10,20 +10,20 @@ Last updated: April 24, 2026 (manual QA findings sync)
 ## Active MVP Product Work (Pre-Soft-Launch)
 
 - [x] Decide legacy `/notes` and `/tasks` route behavior for launch UX (hard-cut 404 confirmed in Apr 24 manual QA).
-- [ ] Deduplicate `/events` task filtering logic to remove drift between list results and status counts.
-- [ ] Add in-flight guard around recurring occurrence selection/completion to prevent duplicate interaction paths.
-- [ ] Expand `/events` route test coverage for remaining weak paths (Notes CRUD dialogs, view-toggle URL sync, mobile details sheet behavior, photo modal open/close).
+- [x] Deduplicate `/events` task filtering logic to remove drift between list results and status counts (landed Apr 24 follow-up hardening pass).
+- [x] Add in-flight guard around recurring occurrence selection/completion to prevent duplicate interaction paths (landed Apr 24 follow-up hardening pass).
+- [x] Expand `/events` route test coverage for remaining weak paths (Notes CRUD dialogs, view-toggle URL sync, mobile details sheet behavior, photo modal open/close, and cleanup unmount assertions). (Landed Apr 24 wrap-up pass.)
 - [x] Run manual UX smoke pass for split Plants/Spaces workspaces (desktop dual-pane + mobile toggles) and capture outcomes in launch notes.
-- [ ] Mobile UI polish pass for Plants/Spaces detail views (functionally correct, minor mobile layout improvements needed).
-- [ ] Events filter UX clarity pass (make filters more explicit and easier to understand).
+- [x] Mobile UI polish pass for Plants/Spaces detail views landed (Apr 24 follow-up).
+- [x] Events filter UX clarity pass landed (explicit context/status labeling + clearer filter guidance).
 
 ## Soft Launch Runway Checklist (April 21 -> May 1, 2026)
 
 - [x] Tue Apr 21: refresh docs/backlog and rerun full local gate set.
 - [x] Wed Apr 22: finalize decision on legacy `/notes` + `/tasks` UX and implement chosen behavior.
-- [ ] Thu Apr 23: land `/events` hardening fixes (filter dedupe + recurring in-flight guard).
+- [x] Thu Apr 23: land `/events` hardening fixes (filter dedupe + recurring in-flight guard). (Implemented Apr 24 follow-up hardening pass.)
 - [x] Fri Apr 24: run manual product smoke pass round 1 (auth, onboarding, dashboard, events, plants, spaces).
-- [ ] Sat Apr 25: add/adjust unit + E2E coverage for the hardening changes.
+- [x] Sat Apr 25: add/adjust targeted `/events` unit coverage for the hardening changes. (Completed Apr 24 wrap-up pass; no additional E2E delta required from this pass.)
 - [ ] Sat Apr 25: run manual product smoke pass round 2 (retest after hardening changes).
 - [ ] Sun Apr 26: bugfix/polish buffer from smoke findings.
 - [ ] Mon Apr 27: prepare launch-candidate commit and rerun full local gate suite.
@@ -44,7 +44,9 @@ Last updated: April 24, 2026 (manual QA findings sync)
   - Events notes/tasks CRUD + note photo upload + recurring task flow worked
   - profile/settings/session smoke checks confirmed good
   - recurring duplicate attempt did not reproduce duplicates
-  - identified non-blocking follow-up polish: filter clarity and small mobile UI tweaks on plant/space detail views
+- [x] Follow-up polish landed after Apr 24 QA:
+  - events filter clarity improvements shipped in `/events`
+  - small mobile UI tweaks shipped on plant/space detail split-workspace views
 - [x] Reworked Plants and Spaces detail pages into split Tasks/Notes layouts (desktop dual-pane + mobile section switcher).
 - [x] Removed legacy `/notes` and `/tasks` route modules as part of `/events` hard-cut (route behavior now 404 unless reintroduced intentionally).
 - [x] Expanded E2E coverage for plant/space split-pane behaviors and legacy route 404 assertions.

@@ -33,7 +33,7 @@ Ship a stable public soft launch on Friday, May 1, 2026 with Free tier access on
   - rerun local gate suite and log evidence
 - [x] Wed Apr 22: route behavior decision (confirmed on Apr 24 QA pass)
   - final UX for `/notes` and `/tasks`: keep hard-cut 404 behavior
-- [ ] Thu Apr 23: hardening implementation
+- [x] Thu Apr 23: hardening implementation (implemented Apr 24 follow-up hardening pass)
   - land `/events` filter predicate dedupe
   - land recurring-occurrence in-flight guard
 - [x] Fri Apr 24: manual QA round 1 (user-run)
@@ -41,7 +41,8 @@ Ship a stable public soft launch on Friday, May 1, 2026 with Free tier access on
   - Events note/task CRUD + photo + recurring flow validated
   - recurring duplicate attempt did not reproduce duplicates
 - [ ] Sat Apr 25: hardening test pass + manual QA round 2
-  - add/adjust unit and E2E assertions for hardening changes
+  - [x] add/adjust targeted `/events` unit assertions for hardening changes (completed Apr 24 wrap-up pass)
+  - [ ] evaluate any follow-on E2E assertion deltas after QA round 2
   - run targeted regression set
 - [ ] Sun Apr 26: fix + polish buffer
   - close high/medium launch blockers from QA round 1
@@ -125,15 +126,15 @@ Use a normal user account and one brand-new account.
 - `1) Legacy routes`: PASS. Decision confirmed to keep `/notes` and `/tasks` as 404.
 - `2) New signup + setup`: PASS. Setup flow works through `Resume Setup` and clears after all 3 steps.
 - `3) Events CRUD + recurring`: PASS. Note photo upload, recurring task create/edit/delete, and filter operation all worked.
-- `4) Plant detail split workspace`: PARTIAL PASS. Desktop/mobile behavior works; minor mobile UI polish still needed.
-- `5) Space detail split workspace`: PARTIAL PASS. Desktop/mobile behavior works; minor mobile UI polish still needed.
+- `4) Plant detail split workspace`: PASS after Apr 24 follow-up polish. Desktop/mobile behavior works with aligned split-workspace layout.
+- `5) Space detail split workspace`: PASS after Apr 24 follow-up polish. Desktop/mobile behavior works with aligned split-workspace layout.
 - `6) Profile/settings/session`: PASS. Display name update, theme persistence, and sign in/out flow were confirmed good.
 - `7) Recurring duplicate guard`: PASS (no duplicates reproduced under rapid interaction attempts).
 
 ## Follow-Up Items From Apr 24 QA
 
-- Improve filter UX clarity in Events for near-term polish.
-- Apply small mobile UI polish pass to Plant and Space detail split-workspace views.
+- [x] Improve filter UX clarity in Events for near-term polish.
+- [x] Apply small mobile UI polish pass to Plant and Space detail split-workspace views.
 
 ## References
 

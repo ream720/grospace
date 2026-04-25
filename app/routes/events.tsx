@@ -218,7 +218,9 @@ const formatDateTime = (date?: Date) =>
 const notesHelperCopy =
   'Use notes for observations, issues, milestones, photo updates, and other context you may want to find later. Use tasks for work that needs a due date or repeat schedule.';
 const tasksHelperCopy =
-  'Use Filters for smart status views: Issues shows overdue tasks plus high-priority tasks due in the next 24 hours, and Due Soon shows pending tasks due in the next 24 hours.';
+  'Use status chips for quick triage, then open Filters for scope, priority, and grouping. Smart statuses: Issues shows overdue tasks plus high-priority tasks due in the next 24 hours, and Due Soon shows pending tasks due in the next 24 hours.';
+const taskSmartStatusHelperCopy =
+  'Issues = overdue + high-priority due in the next 24 hours. Due Soon = pending due in the next 24 hours.';
 
 const getRecurringFallbackSeriesKey = (task: Task): string => {
   const recurrence = task.recurrence;
@@ -327,6 +329,101 @@ const collapseRecurringTasksForDisplay = (
   );
 
   return [...standaloneTasks, ...collapsedRecurringTasks];
+};
+
+type TaskFilterBaseOptions = {
+  contextFilter: TaskContextFilter;
+  scopeFilter: TaskScopeFilter;
+  priorityFilter: TaskPriority | 'all';
+  spaceFilter: string;
+  plantFilter: string;
+};
+
+const applyTaskBaseFilters = (
+  taskList: Task[],
+  {
+    contextFilter,
+    scopeFilter,
+    priorityFilter,
+    spaceFilter,
+    plantFilter,
+  }: TaskFilterBaseOptions
+): Task[] => {
+  let filtered = [...taskList];
+
+  if (contextFilter === 'plants') {
+    filtered = filtered.filter((task) => Boolean(task.plantId));
+  }
+
+  if (contextFilter === 'spaces') {
+    filtered = filtered.filter((task) => Boolean(task.spaceId));
+  }
+
+  if (contextFilter === 'all' && scopeFilter === 'unlinked') {
+    filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
+  }
+
+  if (priorityFilter !== 'all') {
+    filtered = filtered.filter((task) => task.priority === priorityFilter);
+  }
+
+  if (spaceFilter !== 'all') {
+    filtered = filtered.filter((task) => task.spaceId === spaceFilter);
+  }
+
+  if (plantFilter !== 'all') {
+    filtered = filtered.filter((task) => task.plantId === plantFilter);
+  }
+
+  return filtered;
+};
+
+const applyTaskStatusFilter = (
+  taskList: Task[],
+  statusFilter: TaskStatusFilter,
+  referenceDate: Date
+): Task[] => {
+  switch (statusFilter) {
+    case 'pending':
+      return taskList.filter((task) => task.status === 'pending');
+    case 'issues':
+      return taskList.filter((task) => isTaskNeedsAttention(task, referenceDate));
+    case 'dueSoon':
+      return taskList.filter((task) => isTaskDueSoon(task, referenceDate));
+    case 'overdue':
+      return taskList.filter((task) => isTaskOverdue(task, referenceDate));
+    case 'completed':
+      return taskList.filter((task) => task.status === 'completed');
+    default:
+      return taskList;
+  }
+};
+
+const applyTaskSearchFilter = (taskList: Task[], searchQuery: string): Task[] => {
+  if (!searchQuery.trim()) {
+    return taskList;
+  }
+
+  const query = searchQuery.toLowerCase();
+  return taskList.filter(
+    (task) =>
+      task.title.toLowerCase().includes(query) ||
+      task.description?.toLowerCase().includes(query)
+  );
+};
+
+const getRecurringOccurrenceKey = (
+  selectedTask: Task | null,
+  occurrence: RecurringTaskChecklistItem
+): string => {
+  const seriesKey =
+    selectedTask?.recurrenceSeriesId ??
+    selectedTask?.id ??
+    occurrence.taskId ??
+    'standalone';
+  const dueDateKey = startOfDay(occurrence.dueDate).toISOString();
+
+  return `${seriesKey}:${occurrence.occurrenceNumber}:${dueDateKey}`;
 };
 
 const getTaskStatusCopy = (task: Task) => {
@@ -459,6 +556,7 @@ function TaskDetailsContent({
   spaces,
   plants,
   recurrenceChecklist,
+  isRecurringOccurrenceInFlight,
   onMarkComplete,
   onSelectRecurringOccurrence,
   onEdit,
@@ -469,6 +567,9 @@ function TaskDetailsContent({
   spaces: GrowSpace[];
   plants: Plant[];
   recurrenceChecklist?: RecurringTaskChecklist | null;
+  isRecurringOccurrenceInFlight?: (
+    occurrence: RecurringTaskChecklistItem
+  ) => boolean;
   onMarkComplete?: (task: Task) => void;
   onSelectRecurringOccurrence?: (occurrence: RecurringTaskChecklistItem) => void;
   onEdit?: (task: Task) => void;
@@ -652,6 +753,9 @@ function TaskDetailsContent({
                       : item.status === 'pending'
                         ? 'text-sky-300'
                         : 'text-slate-400';
+                const occurrenceIsInFlight = Boolean(
+                  isRecurringOccurrenceInFlight?.(item)
+                );
                 const canSelectOccurrence =
                   item.status !== 'completed' &&
                   Boolean(onSelectRecurringOccurrence);
@@ -661,7 +765,9 @@ function TaskDetailsContent({
                     : 'border-slate-800 bg-slate-950/40'
                 } ${
                   canSelectOccurrence
-                    ? 'cursor-pointer transition hover:border-emerald-400/70 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60'
+                    ? occurrenceIsInFlight
+                      ? 'cursor-wait opacity-70'
+                      : 'cursor-pointer transition hover:border-emerald-400/70 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60'
                     : ''
                 }`;
                 const cardContent = (
@@ -691,6 +797,7 @@ function TaskDetailsContent({
                       key={`${item.occurrenceNumber}-${item.dueDate.toISOString()}`}
                       type="button"
                       className={cardClassName}
+                      disabled={occurrenceIsInFlight}
                       onClick={() => onSelectRecurringOccurrence(item)}
                       aria-label={`Mark occurrence ${item.occurrenceNumber} complete`}
                     >
@@ -994,9 +1101,12 @@ function EventsContent() {
   const [pendingDeleteNote, setPendingDeleteNote] = useState<Note | null>(null);
   const [noteFormLoading, setNoteFormLoading] = useState(false);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [recurringOccurrenceInFlightKeys, setRecurringOccurrenceInFlightKeys] =
+    useState<Record<string, true>>({});
 
   const taskAutoSelectedRef = useRef(false);
   const noteAutoSelectedRef = useRef(false);
+  const recurringOccurrenceInFlightRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!user) return;
@@ -1141,65 +1251,17 @@ function EventsContent() {
   };
 
   const filteredTasks = useMemo(() => {
-    let filtered = [...tasks];
-
-    if (taskContextFilter === 'plants') {
-      filtered = filtered.filter((task) => Boolean(task.plantId));
-    }
-
-    if (taskContextFilter === 'spaces') {
-      filtered = filtered.filter((task) => Boolean(task.spaceId));
-    }
-
-    if (taskContextFilter === 'all' && taskScopeFilter === 'unlinked') {
-      filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
-    }
-
     const referenceDate = new Date();
+    let filtered = applyTaskBaseFilters(tasks, {
+      contextFilter: taskContextFilter,
+      scopeFilter: taskScopeFilter,
+      priorityFilter: taskPriorityFilter,
+      spaceFilter: effectiveTaskSpaceFilter,
+      plantFilter: effectiveTaskPlantFilter,
+    });
 
-    switch (taskStatusFilter) {
-      case 'pending':
-        filtered = filtered.filter((task) => task.status === 'pending');
-        break;
-      case 'issues':
-        filtered = filtered.filter((task) =>
-          isTaskNeedsAttention(task, referenceDate)
-        );
-        break;
-      case 'dueSoon':
-        filtered = filtered.filter((task) => isTaskDueSoon(task, referenceDate));
-        break;
-      case 'overdue':
-        filtered = filtered.filter((task) => isTaskOverdue(task, referenceDate));
-        break;
-      case 'completed':
-        filtered = filtered.filter((task) => task.status === 'completed');
-        break;
-      default:
-        break;
-    }
-
-    if (taskPriorityFilter !== 'all') {
-      filtered = filtered.filter((task) => task.priority === taskPriorityFilter);
-    }
-
-    if (effectiveTaskSpaceFilter !== 'all') {
-      filtered = filtered.filter((task) => task.spaceId === effectiveTaskSpaceFilter);
-    }
-
-    if (effectiveTaskPlantFilter !== 'all') {
-      filtered = filtered.filter((task) => task.plantId === effectiveTaskPlantFilter);
-    }
-
-    if (taskSearchQuery.trim()) {
-      const query = taskSearchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query)
-      );
-    }
-
+    filtered = applyTaskStatusFilter(filtered, taskStatusFilter, referenceDate);
+    filtered = applyTaskSearchFilter(filtered, taskSearchQuery);
     filtered = collapseRecurringTasksForDisplay(filtered, taskStatusFilter);
     filtered.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
@@ -1226,45 +1288,24 @@ function EventsContent() {
   }, [tasks]);
 
   const taskStatusCounts = useMemo(() => {
-    let filtered = [...tasks];
-
-    if (taskContextFilter === 'plants') {
-      filtered = filtered.filter((task) => Boolean(task.plantId));
-    }
-
-    if (taskContextFilter === 'spaces') {
-      filtered = filtered.filter((task) => Boolean(task.spaceId));
-    }
-
-    if (taskContextFilter === 'all' && taskScopeFilter === 'unlinked') {
-      filtered = filtered.filter((task) => !task.plantId && !task.spaceId);
-    }
-
-    if (taskPriorityFilter !== 'all') {
-      filtered = filtered.filter((task) => task.priority === taskPriorityFilter);
-    }
-
-    if (effectiveTaskSpaceFilter !== 'all') {
-      filtered = filtered.filter((task) => task.spaceId === effectiveTaskSpaceFilter);
-    }
-
-    if (effectiveTaskPlantFilter !== 'all') {
-      filtered = filtered.filter((task) => task.plantId === effectiveTaskPlantFilter);
-    }
-
+    const filtered = applyTaskBaseFilters(tasks, {
+      contextFilter: taskContextFilter,
+      scopeFilter: taskScopeFilter,
+      priorityFilter: taskPriorityFilter,
+      spaceFilter: effectiveTaskSpaceFilter,
+      plantFilter: effectiveTaskPlantFilter,
+    });
     const collapsed = collapseRecurringTasksForDisplay(filtered, 'all');
     const referenceDate = new Date();
 
     return {
       all: collapsed.length,
-      pending: collapsed.filter((task) => task.status === 'pending').length,
-      completed: collapsed.filter((task) => task.status === 'completed').length,
-      issues: collapsed.filter((task) => isTaskNeedsAttention(task, referenceDate))
+      pending: applyTaskStatusFilter(collapsed, 'pending', referenceDate).length,
+      completed: applyTaskStatusFilter(collapsed, 'completed', referenceDate)
         .length,
-      dueSoon: collapsed.filter((task) => isTaskDueSoon(task, referenceDate))
-        .length,
-      overdue: collapsed.filter((task) => isTaskOverdue(task, referenceDate))
-        .length,
+      issues: applyTaskStatusFilter(collapsed, 'issues', referenceDate).length,
+      dueSoon: applyTaskStatusFilter(collapsed, 'dueSoon', referenceDate).length,
+      overdue: applyTaskStatusFilter(collapsed, 'overdue', referenceDate).length,
     };
   }, [
     tasks,
@@ -1547,54 +1588,93 @@ function EventsContent() {
     openTaskCompletion(task);
   };
 
+  const beginRecurringOccurrenceInFlight = (occurrenceKey: string) => {
+    if (recurringOccurrenceInFlightRef.current.has(occurrenceKey)) {
+      return false;
+    }
+
+    recurringOccurrenceInFlightRef.current.add(occurrenceKey);
+    setRecurringOccurrenceInFlightKeys((previous) => ({
+      ...previous,
+      [occurrenceKey]: true,
+    }));
+    return true;
+  };
+
+  const endRecurringOccurrenceInFlight = (occurrenceKey: string) => {
+    if (!recurringOccurrenceInFlightRef.current.has(occurrenceKey)) {
+      return;
+    }
+
+    recurringOccurrenceInFlightRef.current.delete(occurrenceKey);
+    setRecurringOccurrenceInFlightKeys((previous) => {
+      if (!previous[occurrenceKey]) {
+        return previous;
+      }
+
+      const next = { ...previous };
+      delete next[occurrenceKey];
+      return next;
+    });
+  };
+
   const handleRecurringOccurrenceSelection = (
     occurrence: RecurringTaskChecklistItem
   ) => {
+    const occurrenceKey = getRecurringOccurrenceKey(selectedTask, occurrence);
+    if (!beginRecurringOccurrenceInFlight(occurrenceKey)) {
+      return;
+    }
+
     const markOccurrence = async () => {
-      if (!occurrence.taskId) {
-        if (!user) {
-          toast.error('User not authenticated');
+      try {
+        if (!occurrence.taskId) {
+          if (!user) {
+            toast.error('User not authenticated');
+            return;
+          }
+
+          if (!selectedTask?.recurrence || !selectedTask.recurrenceStartDate) {
+            toast.error('Unable to mark this occurrence complete.');
+            return;
+          }
+
+          try {
+            const occurrenceTask = await createTask({
+              userId: user.uid,
+              title: selectedTask.title,
+              description: selectedTask.description,
+              dueDate: occurrence.dueDate,
+              priority: selectedTask.priority,
+              status: 'pending',
+              spaceId: selectedTask.spaceId,
+              plantId: selectedTask.plantId,
+              recurrence: selectedTask.recurrence,
+              recurrenceSeriesId: selectedTask.recurrenceSeriesId ?? selectedTask.id,
+              recurrenceOccurrence: occurrence.occurrenceNumber,
+              recurrenceStartDate: selectedTask.recurrenceStartDate,
+            });
+            openTaskCompletion(occurrenceTask, 'recurringTask');
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Failed to mark occurrence complete'
+            );
+          }
           return;
         }
 
-        if (!selectedTask?.recurrence || !selectedTask.recurrenceStartDate) {
-          toast.error('Unable to mark this occurrence complete.');
+        const occurrenceTask = tasks.find((task) => task.id === occurrence.taskId);
+        if (!occurrenceTask) {
+          toast.error('Unable to find that occurrence task.');
           return;
         }
 
-        try {
-          const occurrenceTask = await createTask({
-            userId: user.uid,
-            title: selectedTask.title,
-            description: selectedTask.description,
-            dueDate: occurrence.dueDate,
-            priority: selectedTask.priority,
-            status: 'pending',
-            spaceId: selectedTask.spaceId,
-            plantId: selectedTask.plantId,
-            recurrence: selectedTask.recurrence,
-            recurrenceSeriesId: selectedTask.recurrenceSeriesId ?? selectedTask.id,
-            recurrenceOccurrence: occurrence.occurrenceNumber,
-            recurrenceStartDate: selectedTask.recurrenceStartDate,
-          });
-          openTaskCompletion(occurrenceTask, 'recurringTask');
-        } catch (error) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : 'Failed to mark occurrence complete'
-          );
-        }
-        return;
+        openTaskCompletion(occurrenceTask, 'recurringTask');
+      } finally {
+        endRecurringOccurrenceInFlight(occurrenceKey);
       }
-
-      const occurrenceTask = tasks.find((task) => task.id === occurrence.taskId);
-      if (!occurrenceTask) {
-        toast.error('Unable to find that occurrence task.');
-        return;
-      }
-
-      openTaskCompletion(occurrenceTask, 'recurringTask');
     };
 
     void markOccurrence();
@@ -1878,111 +1958,121 @@ function EventsContent() {
 
     return (
       <>
-        <div className="mb-4 overflow-x-auto pb-2 scrollbar-hide">
-          <Tabs
-            value={taskContextFilter}
-            onValueChange={(value) =>
-              handleTaskContextChange(value as TaskContextFilter)
-            }
-            className="min-w-max"
-          >
-            <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
-              <TabsTrigger value="all">
-                All
-                {taskContextCounts.all > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {taskContextCounts.all}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="plants">
-                Plants
-                {taskContextCounts.plants > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {taskContextCounts.plants}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="spaces">
-                Spaces
-                {taskContextCounts.spaces > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {taskContextCounts.spaces}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Context
+          </p>
+          <div className="overflow-x-auto pb-2 scrollbar-hide">
+            <Tabs
+              value={taskContextFilter}
+              onValueChange={(value) =>
+                handleTaskContextChange(value as TaskContextFilter)
+              }
+              className="min-w-max"
+            >
+              <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
+                <TabsTrigger value="all">
+                  All
+                  {taskContextCounts.all > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {taskContextCounts.all}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="plants">
+                  Plants
+                  {taskContextCounts.plants > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {taskContextCounts.plants}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="spaces">
+                  Spaces
+                  {taskContextCounts.spaces > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {taskContextCounts.spaces}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
-        <div className="mb-3 overflow-x-auto pb-2 scrollbar-hide">
-          <div className="flex min-w-max items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={taskStatusFilter === 'all' ? 'secondary' : 'ghost'}
-              className="h-9"
-              aria-label="All statuses"
-              data-testid="e2e-events-task-status-all"
-              onClick={() => updateSearchParams({ taskStatus: null })}
-            >
-              All
-              {taskStatusCounts.all > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                >
-                  {taskStatusCounts.all}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={taskStatusFilter === 'pending' ? 'secondary' : 'ghost'}
-              className="h-9"
-              aria-label="Pending statuses"
-              data-testid="e2e-events-task-status-pending"
-              onClick={() => updateSearchParams({ taskStatus: 'pending' })}
-            >
-              Pending
-              {taskStatusCounts.pending > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                >
-                  {taskStatusCounts.pending}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={taskStatusFilter === 'completed' ? 'secondary' : 'ghost'}
-              className="h-9"
-              aria-label="Completed statuses"
-              data-testid="e2e-events-task-status-completed"
-              onClick={() => updateSearchParams({ taskStatus: 'completed' })}
-            >
-              Completed
-              {taskStatusCounts.completed > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                >
-                  {taskStatusCounts.completed}
-                </Badge>
-              )}
-            </Button>
+        <div className="mb-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Status
+          </p>
+          <div className="overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex min-w-max items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={taskStatusFilter === 'all' ? 'secondary' : 'ghost'}
+                className="h-9"
+                aria-label="All statuses"
+                data-testid="e2e-events-task-status-all"
+                onClick={() => updateSearchParams({ taskStatus: null })}
+              >
+                All
+                {taskStatusCounts.all > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {taskStatusCounts.all}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={taskStatusFilter === 'pending' ? 'secondary' : 'ghost'}
+                className="h-9"
+                aria-label="Pending statuses"
+                data-testid="e2e-events-task-status-pending"
+                onClick={() => updateSearchParams({ taskStatus: 'pending' })}
+              >
+                Pending
+                {taskStatusCounts.pending > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {taskStatusCounts.pending}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={taskStatusFilter === 'completed' ? 'secondary' : 'ghost'}
+                className="h-9"
+                aria-label="Completed statuses"
+                data-testid="e2e-events-task-status-completed"
+                onClick={() => updateSearchParams({ taskStatus: 'completed' })}
+              >
+                Completed
+                {taskStatusCounts.completed > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                  >
+                    {taskStatusCounts.completed}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -2015,6 +2105,10 @@ function EventsContent() {
               align="end"
               className="w-72 space-y-4 border-slate-700 bg-[#111d32] text-slate-200"
             >
+              <p className="text-xs leading-relaxed text-slate-400">
+                Fine-tune task results by scope, smart status, priority, and context.
+              </p>
+
               {taskContextFilter === 'all' && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -2048,6 +2142,9 @@ function EventsContent() {
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   Smart status
+                </p>
+                <p className="text-xs leading-relaxed text-slate-500">
+                  {taskSmartStatusHelperCopy}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
@@ -2282,50 +2379,55 @@ function EventsContent() {
 
     return (
       <>
-        <div className="mb-4 overflow-x-auto pb-2 scrollbar-hide">
-          <Tabs
-            value={noteContextFilter}
-            onValueChange={(value) =>
-              handleNoteContextChange(value as NoteContextFilter)
-            }
-            className="min-w-max"
-          >
-            <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
-              <TabsTrigger value="all">
-                All
-                {noteContextCounts.all > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {noteContextCounts.all}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="plants">
-                Plants
-                {noteContextCounts.plants > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {noteContextCounts.plants}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="spaces">
-                Spaces
-                {noteContextCounts.spaces > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
-                  >
-                    {noteContextCounts.spaces}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Context
+          </p>
+          <div className="overflow-x-auto pb-2 scrollbar-hide">
+            <Tabs
+              value={noteContextFilter}
+              onValueChange={(value) =>
+                handleNoteContextChange(value as NoteContextFilter)
+              }
+              className="min-w-max"
+            >
+              <TabsList className="min-w-max gap-1 bg-[#111d32] p-1">
+                <TabsTrigger value="all">
+                  All
+                  {noteContextCounts.all > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {noteContextCounts.all}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="plants">
+                  Plants
+                  {noteContextCounts.plants > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {noteContextCounts.plants}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="spaces">
+                  Spaces
+                  {noteContextCounts.spaces > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 border-transparent bg-slate-700 px-1.5 text-[10px] text-slate-300"
+                    >
+                      {noteContextCounts.spaces}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -2357,6 +2459,10 @@ function EventsContent() {
               align="end"
               className="w-72 space-y-4 border-slate-700 bg-[#111d32] text-slate-200"
             >
+              <p className="text-xs leading-relaxed text-slate-400">
+                Fine-tune note results by scope, category, and context links.
+              </p>
+
               {noteContextFilter === 'all' && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -2814,6 +2920,13 @@ function EventsContent() {
                 spaces={spaces}
                 plants={plants}
                 recurrenceChecklist={selectedTaskRecurringChecklist}
+                isRecurringOccurrenceInFlight={(occurrence) =>
+                  Boolean(
+                    recurringOccurrenceInFlightKeys[
+                      getRecurringOccurrenceKey(selectedTask, occurrence)
+                    ]
+                  )
+                }
                 onMarkComplete={openTaskCompletionFromDetails}
                 onSelectRecurringOccurrence={handleRecurringOccurrenceSelection}
                 onEdit={handleEditTask}
@@ -2857,6 +2970,13 @@ function EventsContent() {
                 spaces={spaces}
                 plants={plants}
                 recurrenceChecklist={selectedTaskRecurringChecklist}
+                isRecurringOccurrenceInFlight={(occurrence) =>
+                  Boolean(
+                    recurringOccurrenceInFlightKeys[
+                      getRecurringOccurrenceKey(selectedTask, occurrence)
+                    ]
+                  )
+                }
                 onMarkComplete={openTaskCompletionFromDetails}
                 onSelectRecurringOccurrence={handleRecurringOccurrenceSelection}
                 onEdit={(task) => {
@@ -3003,6 +3123,9 @@ function EventsContent() {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Photo</DialogTitle>
+            <DialogDescription>
+              Expanded view of the selected note attachment.
+            </DialogDescription>
           </DialogHeader>
           {selectedPhotoUrl && (
             <div className="flex justify-center">
